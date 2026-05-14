@@ -18,14 +18,10 @@ const isPublicRoute = createRouteMatcher([
 ]);
 
 export default clerkMiddleware(async (auth, req: NextRequest) => {
-  const { pathname } = req.nextUrl;
-
-  // Let next-intl handle locale detection and redirect for public routes
   if (isPublicRoute(req)) {
     return intlMiddleware(req);
   }
 
-  // Protect all other routes via Clerk
   await auth.protect();
 
   return intlMiddleware(req);
