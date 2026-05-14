@@ -2,6 +2,8 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { getProperty } from '@/app/actions/properties';
 import { getProject } from '@/app/actions/projects';
+import { getAIAnalysis, getRegulatoryAssessment } from '@/app/actions/ai';
+import AIAnalysisPanel from '@/components/property/AIAnalysisPanel';
 
 interface Props {
   params: { locale: string; id: string };
@@ -43,15 +45,22 @@ function formatHa(sqm: number): string {
 }
 
 export default async function PropertyPage({ params: { locale, id } }: Props) {
-  const property = await getProperty(id);
+  const [property, existingAnalysis, existingRegulatory] = await Promise.all([
+    getProperty(id),
+    getAIAnalysis(id),
+    getRegulatoryAssessment(id),
+  ]);
+
   if (!property) notFound();
 
   const project = await getProject(property.project_id);
 
   const featureTags = [
-    property.has_olive_grove && `🫒 Olive grove${property.olive_tree_count ? ` (${property.olive_tree_count} trees)` : ''}`,
+    property.has_olive_grove &&
+      `🫒 Olive grove${property.olive_tree_count ? ` (${property.olive_tree_count} trees)` : ''}`,
     property.has_vineyard && '🍇 Vineyard',
-    property.has_outbuildings && `🏚 Outbuildings${property.outbuilding_sqm ? ` (${property.outbuilding_sqm} m²)` : ''}`,
+    property.has_outbuildings &&
+      `🏚 Outbuildings${property.outbuilding_sqm ? ` (${property.outbuilding_sqm} m²)` : ''}`,
     property.has_pool && '🏊 Pool',
     property.has_pizza_oven && '🍕 Pizza oven',
   ].filter(Boolean) as string[];
@@ -74,7 +83,10 @@ export default async function PropertyPage({ params: { locale, id } }: Props) {
         <span>/</span>
         {project && (
           <>
-            <Link href={`/${locale}/project/${property.project_id}`} className="hover:text-stone-900 transition-colors">
+            <Link
+              href={`/${locale}/project/${property.project_id}`}
+              className="hover:text-stone-900 transition-colors"
+            >
               {project.name}
             </Link>
             <span>/</span>
@@ -95,30 +107,29 @@ export default async function PropertyPage({ params: { locale, id } }: Props) {
             >
               {STAGE_LABELS[property.pipeline_stage] ?? property.pipeline_stage}
             </span>
+            {existingRegulatory?.overall_risk === 'red' && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-50 text-red-700 border border-red-200">
+                🔴 Red Flag
+              </span>
+            )}
           </div>
           {(property.commune || property.region) && (
             <p className="text-stone-500 text-sm mt-1">
-              {[property.commune, property.province, property.region].filter(Boolean).join(', ')}
+              {[property.commune, property.province, property.region]
+                .filter(Boolean)
+                .join(', ')}
             </p>
           )}
         </div>
-
-        <button
-          disabled
-          className="px-4 py-2 bg-amber-600 text-white text-sm font-medium rounded-lg opacity-50 cursor-not-allowed"
-          title="AI analysis coming in Build Priority 7"
-        >
-          Analyze with AI
-        </button>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 border-b border-stone-200 mb-8">
+      <div className="flex gap-1 border-b border-stone-200 mb-8 overflow-x-auto">
         {tabs.map((tab) => (
           <Link
             key={tab.href}
             href={tab.href}
-            className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
+            className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors whitespace-nowrap ${
               tab.active
                 ? 'border-amber-600 text-amber-700'
                 : 'border-transparent text-stone-500 hover:text-stone-700 hover:border-stone-300'
@@ -160,7 +171,6 @@ export default async function PropertyPage({ params: { locale, id } }: Props) {
 
       {/* Details grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        {/* Building info */}
         <section className="space-y-3">
           <h2 className="text-sm font-semibold text-stone-400 uppercase tracking-wide">Building</h2>
           <dl className="space-y-2">
@@ -170,21 +180,23 @@ export default async function PropertyPage({ params: { locale, id } }: Props) {
             {property.energy_class && (
               <DetailRow
                 label="Energy class"
-                value={`Class ${property.energy_class}${property.energy_class === 'G' ? ' — no insulation' : ''}`}
+                value={`Class ${property.energy_class}${
+                  property.energy_class === 'G' ? ' — no insulation' : ''
+                }`}
               />
             )}
             {property.listing_source && (
-              <DetailRow label="Listing source" value={property.listing_source} />
+              <DetailRow label="Source" value={property.listing_source} />
             )}
             {property.listing_url && (
               <DetailRow
-                label="Listing URL"
+                label="Listing"
                 value={
                   <a
                     href={property.listing_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-amber-700 hover:underline break-all"
+                    className="text-amber-700 hover:underline"
                   >
                     View original listing ↗
                   </a>
@@ -194,13 +206,15 @@ export default async function PropertyPage({ params: { locale, id } }: Props) {
           </dl>
         </section>
 
-        {/* Land info */}
         <section className="space-y-3">
           <h2 className="text-sm font-semibold text-stone-400 uppercase tracking-wide">Land</h2>
           <dl className="space-y-2">
             <DetailRow label="Total land" value={formatHa(property.sqm_land)} />
             {property.land_ha >= 1 && (
-              <DetailRow label="Land threshold" value={`${property.land_ha.toFixed(2)} ha — prelazione agraria applies`} />
+              <DetailRow
+                label="Prelazione agraria"
+                value="Applies — neighboring farmers have right of first refusal"
+              />
             )}
           </dl>
         </section>
@@ -230,13 +244,12 @@ export default async function PropertyPage({ params: { locale, id } }: Props) {
         </section>
       )}
 
-      {/* AI analysis placeholder */}
-      <section className="rounded-xl border-2 border-dashed border-stone-200 p-8 text-center">
-        <p className="text-stone-400 text-sm font-medium mb-1">AI Analysis</p>
-        <p className="text-stone-400 text-xs">
-          Click &quot;Analyze with AI&quot; to generate structural assessment, regulatory risk scoring, and renovation scenarios. (Build Priority 7)
-        </p>
-      </section>
+      {/* AI Analysis Panel — client component */}
+      <AIAnalysisPanel
+        propertyId={id}
+        initialAnalysis={existingAnalysis}
+        initialRegulatory={existingRegulatory}
+      />
     </main>
   );
 }
