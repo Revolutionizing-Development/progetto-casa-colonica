@@ -162,6 +162,35 @@
     "locazione_turistica": "Percorso Locazione Turistica",
     "land_threshold_alert": "Avviso Dimensione Terreno"
   },
+  "wizard": {
+    "steps": {
+      "listing_basics": "Dati Annuncio",
+      "location": "Posizione",
+      "building_details": "Dettagli Edificio",
+      "land_features": "Terreno e Caratteristiche",
+      "description": "Descrizione",
+      "exterior_photos": "Foto Esterno",
+      "interior_photos": "Foto Interno",
+      "land_photos": "Foto Terreno",
+      "review": "Riepilogo"
+    },
+    "step_of": "Passo {step} di {total}",
+    "complete": "completo",
+    "back": "Indietro",
+    "continue": "Continua →",
+    "create_property": "Crea Immobile",
+    "creating": "Creazione in corso…",
+    "completeness": "Completezza dati",
+    "completeness_excellent": "Eccellente — l'analisi AI sarà completa.",
+    "completeness_good": "Buon inizio — puoi aggiungere dettagli dopo la creazione.",
+    "completeness_low": "Aggiungi foto e posizione per migliorare la qualità dell'analisi AI.",
+    "photos_drop": "Trascina le foto qui o clicca per sfogliare",
+    "photos_format": "JPEG, PNG, WebP, HEIC · fino a 20 MB ciascuna",
+    "photos_count": "{count} foto aggiunta",
+    "photos_count_plural": "{count} foto aggiunte",
+    "add_property_title": "Aggiungi un Immobile",
+    "add_property_subtitle": "9 passi · circa 5 minuti · puoi modificare tutto dopo la creazione"
+  },
   "common": {
     "save": "Salva",
     "cancel": "Annulla",

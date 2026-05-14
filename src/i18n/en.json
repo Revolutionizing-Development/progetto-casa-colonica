@@ -162,6 +162,35 @@
     "locazione_turistica": "Locazione Turistica Path",
     "land_threshold_alert": "Land Size Alert"
   },
+  "wizard": {
+    "steps": {
+      "listing_basics": "Listing Basics",
+      "location": "Location",
+      "building_details": "Building Details",
+      "land_features": "Land & Features",
+      "description": "Description",
+      "exterior_photos": "Exterior Photos",
+      "interior_photos": "Interior Photos",
+      "land_photos": "Land Photos",
+      "review": "Review"
+    },
+    "step_of": "Step {step} of {total}",
+    "complete": "complete",
+    "back": "Back",
+    "continue": "Continue →",
+    "create_property": "Create Property",
+    "creating": "Creating property…",
+    "completeness": "Data completeness",
+    "completeness_excellent": "Excellent — the AI analysis will be comprehensive.",
+    "completeness_good": "Good start — you can add more detail after creation.",
+    "completeness_low": "Add photos and location to improve AI analysis quality.",
+    "photos_drop": "Drop photos here or click to browse",
+    "photos_format": "JPEG, PNG, WebP, HEIC · up to 20 MB each",
+    "photos_count": "{count} photo added",
+    "photos_count_plural": "{count} photos added",
+    "add_property_title": "Add a Property",
+    "add_property_subtitle": "9 steps · takes about 5 minutes · you can edit everything after creation"
+  },
   "common": {
     "save": "Save",
     "cancel": "Cancel",
