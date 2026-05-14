@@ -1,7 +1,11 @@
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 
-export default function LandingPage() {
+interface Props {
+  params: { locale: string };
+}
+
+export default function LandingPage({ params: { locale } }: Props) {
   const t = useTranslations();
 
   return (
@@ -13,13 +17,13 @@ export default function LandingPage() {
         <p className="text-lg text-stone-600">{t('landing.subheadline')}</p>
         <div className="flex gap-4 justify-center">
           <Link
-            href="/sign-up"
+            href={`/${locale}/sign-up`}
             className="px-6 py-3 bg-amber-700 text-white rounded-md hover:bg-amber-800 transition-colors"
           >
             {t('landing.cta')}
           </Link>
           <Link
-            href="/sign-in"
+            href={`/${locale}/sign-in`}
             className="px-6 py-3 border border-stone-300 text-stone-700 rounded-md hover:bg-stone-100 transition-colors"
           >
             {t('landing.cta_signin')}
