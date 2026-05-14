@@ -1,0 +1,180 @@
+{
+  "nav": {
+    "dashboard": "Pannello",
+    "projects": "Progetti",
+    "contacts": "Contatti",
+    "settings": "Impostazioni"
+  },
+  "landing": {
+    "headline": "Questo casale può diventare la vita che vuoi?",
+    "subheadline": "Analisi di fattibilità per immobili rurali italiani — acquisto, ristrutturazione, conformità fiscale e modellazione degli investimenti.",
+    "cta": "Inizia",
+    "cta_signin": "Accedi"
+  },
+  "project": {
+    "new": "Nuovo Progetto",
+    "name_label": "Nome Progetto",
+    "name_placeholder": "Ricerca Toscana 2026",
+    "created": "Creato",
+    "properties": "Immobili",
+    "no_projects": "Nessun progetto. Crea il primo per iniziare.",
+    "search_criteria": "Criteri di Ricerca",
+    "scoring_weights": "Pesi di Valutazione"
+  },
+  "property": {
+    "new": "Aggiungi Immobile",
+    "name_label": "Nome Immobile",
+    "pipeline_stage": "Fase",
+    "listed_price": "Prezzo di Listino",
+    "sqm_house": "Casa (m²)",
+    "sqm_land": "Terreno (m²)",
+    "commune": "Comune",
+    "province": "Provincia",
+    "region": "Regione",
+    "no_properties": "Nessun immobile aggiunto.",
+    "analyze": "Analizza con AI",
+    "analyzing": "Analisi in corso…",
+    "stages": {
+      "scouted": "Individuato",
+      "analyzing": "In Analisi",
+      "shortlisted": "Selezionato",
+      "site_visit": "Sopralluogo",
+      "negotiating": "In Trattativa",
+      "under_contract": "Compromesso",
+      "closing": "Rogito",
+      "acquired": "Acquistato",
+      "renovating": "In Ristrutturazione",
+      "complete": "Completato"
+    }
+  },
+  "renovation": {
+    "scenarios": "Scenari di Ristrutturazione",
+    "scenario_types": {
+      "basic": "Base",
+      "lifestyle": "Lifestyle",
+      "high_end": "Alta Qualità",
+      "custom": "Personalizzato"
+    },
+    "total_min": "Totale (min)",
+    "total_max": "Totale (max)",
+    "duration_months": "Durata",
+    "contingency": "Contingenza",
+    "generate": "Genera Scenari",
+    "diy_toggle": "Fai da Te",
+    "regulated_item_warning": "Lavoro regolamentato — richiede professionista abilitato"
+  },
+  "financial": {
+    "purchase_costs": "Costi di Acquisto",
+    "renovation_costs": "Costi di Ristrutturazione",
+    "carrying_costs": "Costi di Mantenimento",
+    "operating_costs": "Costi Operativi",
+    "income_projection": "Proiezione dei Ricavi",
+    "monthly_cashflow": "Flusso di Cassa Mensile",
+    "roi_summary": "Riepilogo ROI",
+    "confidence": {
+      "estimated": "Stimato",
+      "quoted": "Preventivato",
+      "confirmed": "Confermato",
+      "actual": "Effettivo"
+    },
+    "income_lines": {
+      "accommodation": "Alloggio",
+      "wine_tastings": "Degustazioni di Vino",
+      "cooking_classes": "Corsi di Cucina",
+      "farm_experiences": "Esperienze in Fattoria",
+      "olive_oil": "Olio d'Oliva"
+    },
+    "tax_regime": {
+      "cedolare_secca_21": "Cedolare Secca 21%",
+      "cedolare_secca_26": "Cedolare Secca 26%",
+      "progressive": "Tassazione Progressiva"
+    },
+    "housing_status": {
+      "primary_residence": "Prima Casa",
+      "second_home": "Seconda Casa"
+    },
+    "n1_warning": "Le proiezioni di reddito iniziano solo dopo il completamento della ristrutturazione.",
+    "n2_warning": "La contingenza del 15–25% è obbligatoria su tutte le stime.",
+    "n5_warning": "I costi di mantenimento durante la ristrutturazione sono inclusi."
+  },
+  "invoice": {
+    "new": "Aggiungi Fattura",
+    "vendor_name": "Fornitore",
+    "partita_iva": "Partita IVA",
+    "invoice_number": "N° Fattura",
+    "invoice_date": "Data",
+    "amount_excl_iva": "Imponibile",
+    "iva_rate": "Aliquota IVA",
+    "total_amount": "Totale",
+    "tax_bonus": "Bonus Fiscale",
+    "payment_method": "Metodo di Pagamento",
+    "bonifico_text": "Testo Bonifico Parlante",
+    "copy_bonifico": "Copia",
+    "payment_methods": {
+      "bonifico_parlante": "Bonifico Parlante ✓",
+      "credit_card": "Carta di Credito ✓",
+      "cash": "Contanti ✗",
+      "regular_transfer": "Bonifico Ordinario ✗"
+    },
+    "cash_warning": "I pagamenti in contanti non danno diritto alle detrazioni fiscali. La detrazione è definitivamente persa.",
+    "deductible": "Detraibile",
+    "not_deductible": "Non Detraibile",
+    "ocr_upload": "Scatta o Carica Foto Fattura",
+    "ocr_extracting": "Estrazione dati fattura in corso…"
+  },
+  "scoring": {
+    "overall_rating": "Valutazione Complessiva",
+    "ratings": {
+      "strong_candidate": "Candidato Forte",
+      "promising": "Promettente",
+      "marginal": "Marginale",
+      "not_recommended": "Non Raccomandato"
+    },
+    "red_flag_blocked": "Bandiera rossa normativa — non può ricevere la valutazione Candidato Forte",
+    "criteria": {
+      "purchase_price": "Prezzo di Acquisto",
+      "all_in_cost": "Costo All-In",
+      "structural_condition": "Condizioni Strutturali",
+      "airbnb_potential": "Potenziale Airbnb",
+      "regulatory_risk": "Rischio Normativo",
+      "lifestyle_fit": "Idoneità Lifestyle",
+      "location_quality": "Qualità Posizione",
+      "land_characteristics": "Caratteristiche del Terreno",
+      "outbuilding_potential": "Potenziale Annessi",
+      "negotiation_margin": "Margine di Trattativa",
+      "exit_value": "Valore di Uscita"
+    }
+  },
+  "pipeline": {
+    "advance": "Avanza alla Prossima Fase",
+    "gate_unmet": "Non tutti i criteri del gate sono soddisfatti",
+    "override": "Ignora Gate",
+    "override_reason_placeholder": "Spiega perché stai procedendo senza tutte le informazioni"
+  },
+  "regulatory": {
+    "risk_levels": {
+      "red": "Rosso — Bloccante",
+      "yellow": "Giallo — Da Verificare",
+      "green": "Verde — OK"
+    },
+    "n3_warning": "Bandiera rossa normativa — questo immobile non può ricevere la valutazione Candidato Forte.",
+    "agriturismo": "Percorso Agriturismo",
+    "locazione_turistica": "Percorso Locazione Turistica",
+    "land_threshold_alert": "Avviso Dimensione Terreno"
+  },
+  "common": {
+    "save": "Salva",
+    "cancel": "Annulla",
+    "delete": "Elimina",
+    "edit": "Modifica",
+    "loading": "Caricamento…",
+    "error": "Qualcosa è andato storto",
+    "confirm_delete": "Sei sicuro? L'operazione non può essere annullata.",
+    "euros": "€",
+    "per_year": "/anno",
+    "per_month": "/mese",
+    "sqm": "m²",
+    "ha": "ha",
+    "ai_estimate_label": "Stima AI"
+  }
+}

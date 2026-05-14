@@ -1,0 +1,180 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "projects": "Projects",
+    "contacts": "Contacts",
+    "settings": "Settings"
+  },
+  "landing": {
+    "headline": "Can this farmhouse become the life you want?",
+    "subheadline": "AI-powered feasibility analysis for rural Italian property — acquisition, renovation, tax compliance, and investment modeling.",
+    "cta": "Get Started",
+    "cta_signin": "Sign In"
+  },
+  "project": {
+    "new": "New Project",
+    "name_label": "Project Name",
+    "name_placeholder": "Tuscany Search 2026",
+    "created": "Created",
+    "properties": "Properties",
+    "no_projects": "No projects yet. Create one to get started.",
+    "search_criteria": "Search Criteria",
+    "scoring_weights": "Scoring Weights"
+  },
+  "property": {
+    "new": "Add Property",
+    "name_label": "Property Name",
+    "pipeline_stage": "Stage",
+    "listed_price": "Listed Price",
+    "sqm_house": "House (m²)",
+    "sqm_land": "Land (m²)",
+    "commune": "Commune",
+    "province": "Province",
+    "region": "Region",
+    "no_properties": "No properties added yet.",
+    "analyze": "Analyze with AI",
+    "analyzing": "Analyzing…",
+    "stages": {
+      "scouted": "Scouted",
+      "analyzing": "Analyzing",
+      "shortlisted": "Shortlisted",
+      "site_visit": "Site Visit",
+      "negotiating": "Negotiating",
+      "under_contract": "Under Contract",
+      "closing": "Closing",
+      "acquired": "Acquired",
+      "renovating": "Renovating",
+      "complete": "Complete"
+    }
+  },
+  "renovation": {
+    "scenarios": "Renovation Scenarios",
+    "scenario_types": {
+      "basic": "Basic",
+      "lifestyle": "Lifestyle",
+      "high_end": "High-End",
+      "custom": "Custom"
+    },
+    "total_min": "Total (min)",
+    "total_max": "Total (max)",
+    "duration_months": "Duration",
+    "contingency": "Contingency",
+    "generate": "Generate Scenarios",
+    "diy_toggle": "DIY",
+    "regulated_item_warning": "Regulated work — licensed professional required"
+  },
+  "financial": {
+    "purchase_costs": "Purchase Costs",
+    "renovation_costs": "Renovation Costs",
+    "carrying_costs": "Carrying Costs",
+    "operating_costs": "Operating Costs",
+    "income_projection": "Income Projection",
+    "monthly_cashflow": "Monthly Cash Flow",
+    "roi_summary": "ROI Summary",
+    "confidence": {
+      "estimated": "Estimated",
+      "quoted": "Quoted",
+      "confirmed": "Confirmed",
+      "actual": "Actual"
+    },
+    "income_lines": {
+      "accommodation": "Accommodation",
+      "wine_tastings": "Wine Tastings",
+      "cooking_classes": "Cooking Classes",
+      "farm_experiences": "Farm Experiences",
+      "olive_oil": "Olive Oil"
+    },
+    "tax_regime": {
+      "cedolare_secca_21": "Cedolare Secca 21%",
+      "cedolare_secca_26": "Cedolare Secca 26%",
+      "progressive": "Progressive Tax"
+    },
+    "housing_status": {
+      "primary_residence": "Primary Residence",
+      "second_home": "Second Home"
+    },
+    "n1_warning": "Income projections begin only after renovation completes.",
+    "n2_warning": "Contingency of 15–25% is mandatory on all estimates.",
+    "n5_warning": "Carrying costs during renovation are included."
+  },
+  "invoice": {
+    "new": "Add Invoice",
+    "vendor_name": "Vendor",
+    "partita_iva": "Partita IVA",
+    "invoice_number": "Invoice No.",
+    "invoice_date": "Date",
+    "amount_excl_iva": "Amount (excl. IVA)",
+    "iva_rate": "IVA Rate",
+    "total_amount": "Total",
+    "tax_bonus": "Tax Bonus",
+    "payment_method": "Payment Method",
+    "bonifico_text": "Bonifico Parlante Text",
+    "copy_bonifico": "Copy",
+    "payment_methods": {
+      "bonifico_parlante": "Bonifico Parlante ✓",
+      "credit_card": "Credit Card ✓",
+      "cash": "Cash ✗",
+      "regular_transfer": "Regular Transfer ✗"
+    },
+    "cash_warning": "Cash payments do not qualify for tax deductions. This deduction is permanently lost.",
+    "deductible": "Tax Deductible",
+    "not_deductible": "Not Deductible",
+    "ocr_upload": "Snap or Upload Invoice Photo",
+    "ocr_extracting": "Extracting invoice data…"
+  },
+  "scoring": {
+    "overall_rating": "Overall Rating",
+    "ratings": {
+      "strong_candidate": "Strong Candidate",
+      "promising": "Promising",
+      "marginal": "Marginal",
+      "not_recommended": "Not Recommended"
+    },
+    "red_flag_blocked": "Red regulatory flag — cannot receive Strong Candidate rating",
+    "criteria": {
+      "purchase_price": "Purchase Price",
+      "all_in_cost": "All-In Cost",
+      "structural_condition": "Structural Condition",
+      "airbnb_potential": "Airbnb Potential",
+      "regulatory_risk": "Regulatory Risk",
+      "lifestyle_fit": "Lifestyle Fit",
+      "location_quality": "Location Quality",
+      "land_characteristics": "Land Characteristics",
+      "outbuilding_potential": "Outbuilding Potential",
+      "negotiation_margin": "Negotiation Margin",
+      "exit_value": "Exit Value"
+    }
+  },
+  "pipeline": {
+    "advance": "Advance to Next Stage",
+    "gate_unmet": "Not all gate criteria are met",
+    "override": "Override Gate",
+    "override_reason_placeholder": "Explain why you are proceeding without full information"
+  },
+  "regulatory": {
+    "risk_levels": {
+      "red": "Red — Blocking",
+      "yellow": "Yellow — Investigate",
+      "green": "Green — Clear"
+    },
+    "n3_warning": "Red regulatory flag — this property cannot receive a Strong Candidate recommendation.",
+    "agriturismo": "Agriturismo Path",
+    "locazione_turistica": "Locazione Turistica Path",
+    "land_threshold_alert": "Land Size Alert"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "loading": "Loading…",
+    "error": "Something went wrong",
+    "confirm_delete": "Are you sure? This cannot be undone.",
+    "euros": "€",
+    "per_year": "/year",
+    "per_month": "/month",
+    "sqm": "m²",
+    "ha": "ha",
+    "ai_estimate_label": "AI Estimate"
+  }
+}
