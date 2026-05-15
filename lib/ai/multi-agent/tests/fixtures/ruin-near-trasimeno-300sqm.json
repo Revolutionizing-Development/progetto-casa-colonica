@@ -1,0 +1,24 @@
+{
+  "commune": "Panicale",
+  "province": "PG",
+  "region": "Umbria",
+  "askingPrice": 89000,
+  "buildingAreaSqm": 300,
+  "landAreaSqm": 8000,
+  "numberOfFloors": 2,
+  "constructionType": "stone",
+  "energyClass": "G",
+  "conditionCategory": "ruin",
+  "description": "Rudere in pietra di circa 300 mq lordi in posizione panoramica collinare a 8 km dal Lago Trasimeno. Il fabbricato non è abitabile: tetto parzialmente crollato (circa 40%), muri perimetrali in pietra generalmente integri ma con lesioni in corrispondenza degli angoli. Nessun impianto. Il progetto di recupero richiederà nuova copertura completa, consolidamento strutturale, e realizzazione ex-novo di tutti gli impianti. Terreno di 8000 mq con seminativo e macchia. Strada sterrata di accesso di 400m. Posizione tranquilla con viste verso il lago.",
+  "photos": [
+    { "type": "facade", "url": "https://example.com/pan-facade.jpg" },
+    { "type": "structural", "url": "https://example.com/pan-structural.jpg" },
+    { "type": "roof", "url": "https://example.com/pan-roof.jpg" }
+  ],
+  "searchCriteria": {
+    "intendedUse": "vacation_home",
+    "numberOfAirbnbUnits": 0,
+    "ownerResidenceSqm": 300,
+    "farmFeatures": ["goats", "pizza_oven", "solar"]
+  }
+}

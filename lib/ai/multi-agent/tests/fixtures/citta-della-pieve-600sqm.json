@@ -1,0 +1,25 @@
+{
+  "commune": "Città della Pieve",
+  "province": "PG",
+  "region": "Umbria",
+  "askingPrice": 385000,
+  "buildingAreaSqm": 600,
+  "landAreaSqm": 4500,
+  "numberOfFloors": 2,
+  "constructionType": "stone",
+  "energyClass": "G",
+  "energyConsumption": 340,
+  "conditionCategory": "major_renovation",
+  "description": "Imponente casale in pietra di 600 mq con dependance di 80 mq, situato sulle colline dell'Umbria meridionale a 3 km da Città della Pieve. L'immobile si sviluppa su due piani con soffitti a volta, travi in legno originali e pavimenti in cotto antico. Il tetto è stato parzialmente rifatto nel 2018. Necessita di completo rifacimento degli impianti elettrico, idraulico e di riscaldamento. La dependance è parzialmente ristrutturata con cucina e bagno funzionanti. Vista panoramica sulla Val di Chiana.",
+  "photos": [
+    { "type": "facade", "url": "https://example.com/cdp-facade.jpg" },
+    { "type": "roof", "url": "https://example.com/cdp-roof.jpg" },
+    { "type": "interior", "url": "https://example.com/cdp-interior.jpg" }
+  ],
+  "searchCriteria": {
+    "intendedUse": "airbnb",
+    "numberOfAirbnbUnits": 3,
+    "ownerResidenceSqm": 180,
+    "farmFeatures": ["pizza_oven", "wine_courtyard", "chickens", "garden"]
+  }
+}

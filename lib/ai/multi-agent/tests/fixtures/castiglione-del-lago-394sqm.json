@@ -1,0 +1,26 @@
+{
+  "commune": "Castiglione del Lago",
+  "province": "PG",
+  "region": "Umbria",
+  "askingPrice": 295000,
+  "buildingAreaSqm": 394,
+  "landAreaSqm": 12000,
+  "numberOfFloors": 2,
+  "constructionType": "mixed",
+  "energyClass": "F",
+  "energyConsumption": 280,
+  "conditionCategory": "moderate_renovation",
+  "description": "Casale di 394 mq con dependance e terreno di 1,2 ettari a 5 km dal Lago Trasimeno. Il corpo principale è stato abitabile fino al 2019 con impianti funzionanti (da aggiornare). Il tetto è in buone condizioni, rifatto completamente nel 2015. Cucina e bagni originali anni '90 da rinnovare. Potenziale per 2 appartamenti vacanze con ingresso indipendente attraverso la dependance esistente. Il terreno include uliveto (40 piante) e bosco. Allacciamenti acqua, luce e gas presenti.",
+  "photos": [
+    { "type": "facade", "url": "https://example.com/cdl-facade.jpg" },
+    { "type": "aerial", "url": "https://example.com/cdl-aerial.jpg" },
+    { "type": "interior", "url": "https://example.com/cdl-interior.jpg" },
+    { "type": "land", "url": "https://example.com/cdl-land.jpg" }
+  ],
+  "searchCriteria": {
+    "intendedUse": "airbnb",
+    "numberOfAirbnbUnits": 2,
+    "ownerResidenceSqm": 150,
+    "farmFeatures": ["solar", "garden", "orchard"]
+  }
+}
