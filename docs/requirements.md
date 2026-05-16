@@ -496,6 +496,54 @@ Kanban board, event timeline, offer tracking, document upload, contact managemen
 - Tab page: `src/app/[locale]/property/[id]/location/page.tsx`
 - Migration: `docs/migration-022-location-intelligence.sql`
 
+### 4.14 QuickScan — Lightweight AI Triage — NEW
+
+**Purpose:** Fast, cheap AI triage of property listings before committing to the full 60-120 second Sonnet analysis. Returns a pass/maybe/fail verdict in ~10 seconds at ~10x lower cost.
+
+**Model:** Claude 3.5 Haiku (`claude-3-5-haiku-20241022`) — ~$0.80/M input, $4/M output vs Sonnet's $3/$15.
+
+**Data model:** `quickscan JSONB` column on `properties` table (migration 023). Stores:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `verdict` | `'pass' \| 'maybe' \| 'fail'` | Overall triage result |
+| `verdict_reason` | string | One-sentence explanation |
+| `observations` | string[] | 3-5 key observations |
+| `renovation_tier` | `'cosmetic' \| 'moderate' \| 'heavy' \| 'structural_rebuild'` | Expected renovation scope |
+| `price_assessment` | `'bargain' \| 'fair' \| 'overpriced' \| 'insufficient_data'` | Quick price assessment |
+| `deal_breakers` | string[] | Immediate blockers (empty if none) |
+| `recommended_next` | `'full_analysis' \| 'skip' \| 'investigate_first'` | What to do next |
+| `scanned_at` | ISO timestamp | When the scan was performed |
+
+**UI:** `QuickScanPanel` on property overview page, positioned above the full AI Analysis panel. Traffic-light verdict card with observations, deal breakers, and recommendation.
+
+**Workflow:** Add property → QuickScan (10 sec, ~$0.02) → decide skip/investigate → Full Analysis (60-120 sec, ~$0.15) → Score → Compare.
+
+**Key files:**
+- Prompt + types: `src/lib/ai/prompts/quickscan.ts`
+- API route: `src/app/api/ai/quickscan/route.ts`
+- Client component: `src/components/property/QuickScanPanel.tsx`
+- Migration: `docs/migration-023-quickscan.sql`
+
+### 4.15 Property Search Guide — NEW
+
+**Purpose:** A comprehensive guide helping users find ideal candidate Italian properties. Addresses the gap where users struggle to identify good listings without domain-specific knowledge of Italian real estate.
+
+**Page:** `/[locale]/guide` — accessible from NavBar ("Guide" link).
+
+**Sections:**
+1. **Where to Search** — 5 source cards (Immobiliare.it, Idealista, Casa.it, Gate-Away.com, local agents) with strengths and tips.
+2. **Key Italian Search Terms** — 14 essential terms (casale, rustico, podere, colonica, rudere, da ristrutturare, etc.) with translations and context.
+3. **What Makes a Good Candidate** — Three checklists: must-haves (green), strong positives (amber), red flags (red).
+4. **Price Benchmarks by Region** — 8 regions with approximate ranges and market notes.
+5. **Using QuickScan to Filter Fast** — 5-step workflow with cost comparison table.
+6. **Reading Between the Lines** — 7 common listing patterns decoded (agent-speak to reality).
+7. **From Listing to Decision** — Pipeline stages explained with recommended actions at each stage.
+
+**Key files:**
+- Page: `src/app/[locale]/guide/page.tsx`
+- NavBar: `src/components/layout/NavBar.tsx`
+
 ---
 
 ## 5. Data Model (Supabase Schema)
@@ -806,6 +854,9 @@ As a property owner, I want to configure house rules (quiet hours, check-in time
 
 | 1.2.25 | 2026-05-15 | **Project types**: Migration 021 adds `project_type TEXT NOT NULL DEFAULT 'farmstead_hosting'` to projects table with CHECK constraint. Two types: `private_homestead` (no guests, no income) and `farmstead_hosting` (Airbnb/agriturismo, full scope). Type chosen at project creation via radio selector in NewProjectForm. Cascades through: scoring (8 vs 11 criteria, redistributed weights), AI prompts (analysis, scenarios, score — project type context injected), cost engine (guest_separation category + airbnb items filtered for homestead), timeline (no Airbnb go-live gate, no guest-separation/airbnb-fitout phases), financial model (no income for homestead), search criteria (agriturismo checkbox hidden), project comparison (uses project_type instead of scenario type). Type exported from `@/types/project` as canonical source. | User requirement: "every property is evaluated for Airbnb hosting — this must change" |
 | 1.2.26 | 2026-05-15 | **Location & Life Intelligence**: Migration 022 adds `location_intelligence JSONB` to properties table. New property tab "Location & Life" with four sections: (1) Regulatory feasibility checklist — Claude AI-researched per commune, green/yellow/red per question, project-type-aware (10 questions hosting, 7 homestead), with verification source hints; (2) Distance cards — 7 POI categories (supermarket, bakery, pharmacy, hospital, vet, train station, airport) via Mapbox Geocoding + Directions APIs with drive times and color coding; (3) Community profile — AI-assessed expat presence, demographics, language, events, outdoor activities, cycling, internet connectivity, overall vibe; (4) Accessibility map — Mapbox GL JS with property marker, POI markers with popups, 3 isochrone rings (10/20/30 min) via Mapbox Isochrone v1 API. API route `POST /api/ai/location-intelligence` (300s timeout). Tab added to all property pages. | User requirement: "Build a new property tab Location & Life" |
+| 1.2.27 | 2026-05-16 | **QuickScan — lightweight AI triage**: Migration 023 adds `quickscan JSONB` to properties table. New `QuickScanPanel` on property overview page (above full analysis). Uses Claude 3.5 Haiku (`claude-3-5-haiku-20241022`) at ~10x lower cost than full Sonnet analysis. Returns pass/maybe/fail verdict with key observations, renovation tier, price assessment, deal breakers, and recommended next step in ~10 seconds. API route `POST /api/ai/quickscan` (60s timeout). Designed for two-step workflow: QuickScan first to filter, then full analysis only on promising candidates. | User requirement: "consider a quickscan on a property to reduce token cost" |
+| 1.2.28 | 2026-05-16 | **Property Search Guide**: New page at `/[locale]/guide` with 7 sections: (1) Where to search — Immobiliare.it, Idealista, Casa.it, Gate-Away, local agents; (2) Key Italian search terms — 14 essential terms decoded; (3) What makes a good candidate — must-haves, strong positives, red flags checklists; (4) Price benchmarks by region — 8 regions with ranges and notes; (5) Using QuickScan workflow — 5-step process with cost comparison; (6) Reading between the lines — 7 common listing patterns decoded; (7) From listing to decision — pipeline stages explained. "Guide" link added to NavBar. | User requirement: "guide the user with a tutorial how to search for the ideal candidate property" |
+| 1.2.29 | 2026-05-16 | **Voltage/electrical concerns removed from UI**: Removed voltage_concerns display section from AIAnalysisPanel. Previously excluded from AI prompt (1.2.26) but UI still rendered existing data. | User requirement: "remove the risk for Electrical / Voltage differences" |
 
 ---
 

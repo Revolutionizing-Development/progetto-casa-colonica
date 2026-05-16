@@ -17,3 +17,6 @@ export function getAnthropicClient(): Anthropic {
 }
 
 export const ANALYSIS_MODEL = 'claude-sonnet-4-6';
+
+/** Lightweight model for QuickScan triage — ~10x cheaper than Sonnet */
+export const QUICKSCAN_MODEL = 'claude-3-5-haiku-20241022';

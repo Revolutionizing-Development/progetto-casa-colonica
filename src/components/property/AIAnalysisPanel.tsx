@@ -194,18 +194,6 @@ export default function AIAnalysisPanel({
               )}
             </div>
 
-            {/* Voltage concerns */}
-            {analysis.voltage_concerns.length > 0 && (
-              <div className="mt-3 p-3 bg-amber-50 border border-amber-100 rounded-lg">
-                <p className="text-xs font-semibold text-amber-800 mb-1">⚡ Electrical / Voltage</p>
-                <ul className="space-y-1">
-                  {analysis.voltage_concerns.map((c, i) => (
-                    <li key={i} className="text-xs text-amber-700">• {c}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
             {/* Key risks */}
             {analysis.key_risks.length > 0 && (
               <div className="mt-4">

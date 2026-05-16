@@ -6,6 +6,7 @@ import { getAIAnalysis, getRegulatoryAssessment } from '@/app/actions/ai';
 import { getScoring } from '@/app/actions/scoring';
 import AIAnalysisPanel from '@/components/property/AIAnalysisPanel';
 import ScoringPanel from '@/components/property/ScoringPanel';
+import QuickScanPanel from '@/components/property/QuickScanPanel';
 
 interface Props {
   params: { locale: string; id: string };
@@ -250,6 +251,12 @@ export default async function PropertyPage({ params: { locale, id } }: Props) {
           </div>
         </section>
       )}
+
+      {/* QuickScan — fast AI triage */}
+      <QuickScanPanel
+        propertyId={id}
+        initial={property.quickscan ?? null}
+      />
 
       {/* AI Analysis Panel — client component */}
       <AIAnalysisPanel

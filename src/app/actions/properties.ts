@@ -68,6 +68,7 @@ export type PropertyRow = {
   listing_description: string | null;
   notes: string | null;
   location_intelligence: import('@/types/location-intelligence').LocationIntelligence | null;
+  quickscan: import('@/lib/ai/prompts/quickscan').QuickScanResult | null;
   created_at: string;
   updated_at: string;
 };
@@ -136,7 +137,7 @@ export async function getProperties(projectId: string): Promise<PropertyRow[]> {
       'id, project_id, user_id, name, pipeline_stage, listed_price, sqm_house, sqm_land, land_ha, ' +
         'num_bedrooms, num_bathrooms, year_built, energy_class, commune, province, region, lat, lng, ' +
         'has_olive_grove, olive_tree_count, has_vineyard, has_outbuildings, outbuilding_sqm, ' +
-        'has_pool, has_pizza_oven, listing_url, listing_source, listing_description, notes, location_intelligence, created_at, updated_at',
+        'has_pool, has_pizza_oven, listing_url, listing_source, listing_description, notes, location_intelligence, quickscan, created_at, updated_at',
     )
     .eq('project_id', projectId)
     .eq('user_id', uid)
