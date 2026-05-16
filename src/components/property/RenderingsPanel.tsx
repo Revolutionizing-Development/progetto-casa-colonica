@@ -5,6 +5,8 @@ import { deleteRendering } from '@/app/actions/renderings';
 import BeforeAfterSlider from '@/components/rendering/BeforeAfterSlider';
 import type { Rendering, RenderingType } from '@/types/rendering';
 import type { RenovationScenario } from '@/types/renovation';
+import type { PhotoCategory } from '@/types/photo';
+import { PHOTO_CATEGORY_LABELS } from '@/types/photo';
 
 const TYPE_LABELS: Record<RenderingType, string> = {
   exterior_front: 'Exterior (front)',
@@ -16,10 +18,21 @@ const TYPE_LABELS: Record<RenderingType, string> = {
   aerial: 'Aerial view',
 };
 
-const RENDERING_TYPES: RenderingType[] = [
-  'exterior_front', 'exterior_rear', 'courtyard',
-  'interior_living', 'interior_kitchen', 'interior_airbnb', 'aerial',
-];
+/** Map photo classification → rendering type. Null = not renderable. */
+const PHOTO_TO_RENDERING: Record<PhotoCategory, RenderingType | null> = {
+  aerial: 'aerial',
+  exterior_front: 'exterior_front',
+  exterior_rear: 'exterior_rear',
+  courtyard: 'courtyard',
+  interior_living: 'interior_living',
+  interior_kitchen: 'interior_kitchen',
+  interior_bedroom: 'interior_airbnb',
+  interior_bathroom: 'interior_living',
+  land: 'aerial',
+  outbuilding: 'exterior_front',
+  roof: null,
+  detail: null,
+};
 
 interface PropertyPhoto {
   id: string;
@@ -37,21 +50,38 @@ interface Props {
 export default function RenderingsPanel({ propertyId, scenarios, initialRenderings, photos }: Props) {
   const [renderings, setRenderings] = useState(initialRenderings);
   const [selectedScenarioId, setSelectedScenarioId] = useState(scenarios[0]?.id ?? '');
-  const [selectedType, setSelectedType] = useState<RenderingType>('exterior_front');
-  const [selectedPhotoUrl, setSelectedPhotoUrl] = useState(photos[0]?.url ?? '');
+  const [selectedPhotoId, setSelectedPhotoId] = useState(photos[0]?.id ?? '');
+  const [overrideType, setOverrideType] = useState<RenderingType | null>(null);
+  const [showReclassify, setShowReclassify] = useState(false);
   const [additionalInstructions, setAdditionalInstructions] = useState('');
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState('');
 
+  const selectedPhoto = photos.find((p) => p.id === selectedPhotoId);
+  const photoCategory = (selectedPhoto?.category ?? 'exterior_front') as PhotoCategory;
+  const autoDetectedType = PHOTO_TO_RENDERING[photoCategory];
+  const renderingType = overrideType ?? autoDetectedType;
+  const isRenderable = renderingType !== null;
+
   const scenarioRenderings = renderings.filter((r) => r.scenario_id === selectedScenarioId);
+
+  function handleSelectPhoto(photo: PropertyPhoto) {
+    setSelectedPhotoId(photo.id);
+    setOverrideType(null);
+    setShowReclassify(false);
+  }
 
   const handleGenerate = useCallback(async () => {
     if (!selectedScenarioId) {
       setError('Select a renovation scenario first — renderings must reflect your configured scope (Constitution N6).');
       return;
     }
-    if (!selectedPhotoUrl) {
+    if (!selectedPhoto) {
       setError('Select a source photo — per Constitution N6, renderings use the original photo as canvas.');
+      return;
+    }
+    if (!renderingType) {
+      setError('This photo type cannot be rendered. Select a different photo.');
       return;
     }
     setGenerating(true);
@@ -64,8 +94,8 @@ export default function RenderingsPanel({ propertyId, scenarios, initialRenderin
         body: JSON.stringify({
           propertyId,
           scenarioId: selectedScenarioId,
-          type: selectedType,
-          sourcePhotoUrl: selectedPhotoUrl,
+          type: renderingType,
+          sourcePhotoUrl: selectedPhoto.url,
           additionalInstructions: additionalInstructions || undefined,
         }),
       });
@@ -82,7 +112,7 @@ export default function RenderingsPanel({ propertyId, scenarios, initialRenderin
     } finally {
       setGenerating(false);
     }
-  }, [propertyId, selectedScenarioId, selectedType, selectedPhotoUrl, additionalInstructions]);
+  }, [propertyId, selectedScenarioId, renderingType, selectedPhoto, additionalInstructions]);
 
   async function handleDelete(id: string) {
     const result = await deleteRendering(id);
@@ -128,25 +158,80 @@ export default function RenderingsPanel({ propertyId, scenarios, initialRenderin
         <div className="px-5 py-4 space-y-4">
           {/* Source photo selection */}
           <div>
-            <label className="block text-xs text-stone-500 mb-2">Source photo (the "before" image)</label>
+            <label className="block text-xs text-stone-500 mb-2">Source photo (the &quot;before&quot; image)</label>
             <div className="flex gap-2 overflow-x-auto pb-2">
-              {photos.map((p) => (
-                <button
-                  key={p.id}
-                  onClick={() => setSelectedPhotoUrl(p.url)}
-                  className={`shrink-0 w-24 h-16 rounded-lg overflow-hidden border-2 transition-colors ${
-                    selectedPhotoUrl === p.url
-                      ? 'border-amber-500 ring-2 ring-amber-200'
-                      : 'border-stone-200 hover:border-stone-300'
-                  }`}
-                >
-                  <img src={p.url} alt={p.category} className="w-full h-full object-cover" />
-                </button>
-              ))}
+              {photos.map((p) => {
+                const cat = p.category as PhotoCategory;
+                const canRender = PHOTO_TO_RENDERING[cat] !== null;
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => handleSelectPhoto(p)}
+                    className={`shrink-0 relative rounded-lg overflow-hidden border-2 transition-colors ${
+                      selectedPhotoId === p.id
+                        ? 'border-amber-500 ring-2 ring-amber-200'
+                        : canRender
+                        ? 'border-stone-200 hover:border-stone-300'
+                        : 'border-stone-200 opacity-50'
+                    }`}
+                  >
+                    <img src={p.url} alt={p.category} className="w-24 h-16 object-cover" />
+                    <span className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[9px] px-1 py-0.5 text-center truncate">
+                      {PHOTO_CATEGORY_LABELS[cat] ?? p.category}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* Auto-detected type label */}
+          {selectedPhoto && (
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-stone-500">Detected type:</span>
+              <span className={`text-xs font-semibold px-2 py-0.5 rounded ${isRenderable ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+                {isRenderable
+                  ? TYPE_LABELS[renderingType!]
+                  : `${PHOTO_CATEGORY_LABELS[photoCategory]} — not renderable`}
+              </span>
+              {isRenderable && !showReclassify && (
+                <button
+                  onClick={() => setShowReclassify(true)}
+                  className="text-xs text-stone-400 hover:text-stone-600 underline"
+                >
+                  Reclassify
+                </button>
+              )}
+              {showReclassify && (
+                <select
+                  value={overrideType ?? ''}
+                  onChange={(e) => {
+                    const v = e.target.value as RenderingType;
+                    setOverrideType(v || null);
+                    if (!v) setShowReclassify(false);
+                  }}
+                  className="text-xs border border-stone-300 rounded px-2 py-1"
+                >
+                  <option value="">Auto ({TYPE_LABELS[autoDetectedType!] ?? 'none'})</option>
+                  {(Object.keys(TYPE_LABELS) as RenderingType[]).map((t) => (
+                    <option key={t} value={t}>{TYPE_LABELS[t]}</option>
+                  ))}
+                </select>
+              )}
+            </div>
+          )}
+
+          {/* Not renderable warning */}
+          {selectedPhoto && !isRenderable && (
+            <div className="p-3 bg-stone-50 border border-stone-200 rounded-lg">
+              <p className="text-sm text-stone-600">
+                <strong>{PHOTO_CATEGORY_LABELS[photoCategory]}</strong> photos cannot be rendered.
+                Select a facade, aerial, courtyard, interior, or land photo instead.
+              </p>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs text-stone-500 mb-1">Renovation scenario</label>
               <select
@@ -159,22 +244,10 @@ export default function RenderingsPanel({ propertyId, scenarios, initialRenderin
                 ))}
               </select>
             </div>
-            <div>
-              <label className="block text-xs text-stone-500 mb-1">View type</label>
-              <select
-                value={selectedType}
-                onChange={(e) => setSelectedType(e.target.value as RenderingType)}
-                className="w-full border border-stone-300 rounded-lg px-3 py-2 text-sm"
-              >
-                {RENDERING_TYPES.map((t) => (
-                  <option key={t} value={t}>{TYPE_LABELS[t]}</option>
-                ))}
-              </select>
-            </div>
             <div className="flex items-end">
               <button
                 onClick={handleGenerate}
-                disabled={generating}
+                disabled={generating || !isRenderable}
                 className="w-full px-4 py-2 bg-amber-600 text-white text-sm font-medium rounded-lg hover:bg-amber-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {generating ? 'Editing photo...' : 'Generate Rendering'}
@@ -196,7 +269,7 @@ export default function RenderingsPanel({ propertyId, scenarios, initialRenderin
             <div className="flex items-center gap-3 py-3 px-4 bg-amber-50 rounded-lg border border-amber-100">
               <div className="w-4 h-4 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
               <p className="text-sm text-amber-700">
-                Editing your {TYPE_LABELS[selectedType].toLowerCase()} photo with renovation changes — this typically takes 30-60 seconds...
+                Editing your {renderingType ? TYPE_LABELS[renderingType].toLowerCase() : ''} photo with renovation changes — this typically takes 30-60 seconds...
               </p>
             </div>
           )}

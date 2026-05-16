@@ -18,9 +18,9 @@ export const YEAR_LABELS: Record<PhaseYear, string> = {
 
 export const YEAR_COLORS: Record<PhaseYear, { bg: string; border: string; text: string; badge: string; bar: string }> = {
   1: { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-800', badge: 'bg-amber-100 text-amber-700', bar: 'bg-amber-400' },
-  2: { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-800', badge: 'bg-blue-100 text-blue-700', bar: 'bg-blue-400' },
-  3: { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-800', badge: 'bg-emerald-100 text-emerald-700', bar: 'bg-emerald-400' },
-  4: { bg: 'bg-stone-50', border: 'border-stone-200', text: 'text-stone-600', badge: 'bg-stone-100 text-stone-600', bar: 'bg-stone-300' },
+  2: { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-800', badge: 'bg-amber-100 text-amber-700', bar: 'bg-amber-400' },
+  3: { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-800', badge: 'bg-emerald-100 text-emerald-700', bar: 'bg-emerald-500' },
+  4: { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-800', badge: 'bg-emerald-100 text-emerald-700', bar: 'bg-emerald-500' },
 };
 
 export const YEAR_SUBTITLES: Record<PhaseYear, string> = {
@@ -149,6 +149,15 @@ function PhaseBucket({
   );
 }
 
+// ── Cash flow computation ──────────────────────────────────────────
+
+interface FundingDetail {
+  label: string;
+  monthlyAmount: number;
+  months: number;
+  total: number;
+}
+
 interface AnnualCashRow {
   year: PhaseYear;
   purchaseCost: number;
@@ -156,8 +165,10 @@ interface AnnualCashRow {
   carryingCosts: number;
   livingCosts: number;
   totalOutflow: number;
+  fundingDetails: FundingDetail[];
   fundingInflow: number;
-  netCashNeeded: number;
+  cashDrawn: number;
+  runningBalance: number;
 }
 
 function computeAnnualCash(
@@ -169,6 +180,8 @@ function computeAnnualCash(
   const carryingMonthly = DEFAULT_CARRYING_COST_MONTHLY;
   const livingMonthly = Math.round(hp.annual_living_costs / 12);
   const moveMonth = hp.us_phase_months;
+
+  let runningBalance = hp.starting_cash;
 
   return ([1, 2, 3, 4] as PhaseYear[]).map((yr) => {
     const purchaseCost = yr === 1 ? purchasePrice : 0;
@@ -184,15 +197,29 @@ function computeAnnualCash(
     const livingCosts = livingMonthly * livingMonths;
     const totalOutflow = purchaseCost + renovationSpend + carryingCosts + livingCosts;
 
-    const fundingInflow = inflows.reduce((sum, inflow) => {
-      const yearStart = (yr - 1) * 12 + 1;
-      const yearEnd = yr * 12;
+    // Compute per-inflow details for this year
+    const fundingDetails: FundingDetail[] = [];
+    let fundingInflow = 0;
+
+    for (const inflow of inflows) {
       let months = 0;
       for (let m = yearStart; m <= yearEnd; m++) {
         if (m >= inflow.startMonth && m <= inflow.endMonth) months++;
       }
-      return sum + inflow.monthlyAmount * months;
-    }, 0);
+      if (months > 0) {
+        const total = inflow.monthlyAmount * months;
+        fundingInflow += total;
+        fundingDetails.push({
+          label: inflow.label,
+          monthlyAmount: inflow.monthlyAmount,
+          months,
+          total,
+        });
+      }
+    }
+
+    const cashDrawn = totalOutflow - fundingInflow;
+    runningBalance -= cashDrawn;
 
     return {
       year: yr,
@@ -201,11 +228,15 @@ function computeAnnualCash(
       carryingCosts,
       livingCosts,
       totalOutflow,
+      fundingDetails,
       fundingInflow,
-      netCashNeeded: totalOutflow - fundingInflow,
+      cashDrawn,
+      runningBalance,
     };
   });
 }
+
+// ── Component ──────────────────────────────────────────────────────
 
 interface Props {
   items: ComputedLineItem[];
@@ -226,14 +257,15 @@ export default function PhaseTimeline({ items, phaseAssignments, purchasePrice, 
   const totals = [phase1, phase2, phase3, phase4].map((p) =>
     p.reduce((s, i) => s + i.effectiveCost, 0),
   );
-  const grandTotal = totals[0] + totals[1] + totals[2] + totals[3];
 
   const annualCash = useMemo(
     () => computeAnnualCash(totals, purchasePrice, householdProfile),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [totals[0], totals[1], totals[2], totals[3], purchasePrice, householdProfile],
   );
-  const totalCashNeeded = annualCash.reduce((s, r) => s + Math.max(0, r.netCashNeeded), 0);
+
+  const hp = householdProfile;
+  const hasProfile = hp.id && hp.id.length > 0;
 
   function handleMoveToPhase(key: string, phase: PhaseYear) {
     onChange({ ...phaseAssignments, [key]: phase });
@@ -256,49 +288,60 @@ export default function PhaseTimeline({ items, phaseAssignments, purchasePrice, 
 
       {expanded && (
         <div className="px-5 py-4 space-y-4">
-          {/* Summary bar */}
-          <div className="flex h-6 rounded-full overflow-hidden border border-stone-200">
-            {grandTotal > 0 && (
-              <>
-                {([1, 2, 3, 4] as PhaseYear[]).map((yr) => {
-                  const pct = (totals[yr - 1] / grandTotal) * 100;
-                  return (
-                    <div
-                      key={yr}
-                      className={`${YEAR_COLORS[yr].bar} flex items-center justify-center`}
-                      style={{ width: `${pct}%` }}
-                    >
-                      {pct > 12 && (
-                        <span className={`text-xs font-bold ${yr <= 2 ? 'text-white' : yr === 3 ? 'text-emerald-900' : 'text-stone-600'}`}>
-                          Y{yr}
-                        </span>
-                      )}
-                    </div>
-                  );
-                })}
-              </>
-            )}
-          </div>
-
-          {/* Per-year renovation totals */}
-          <div className="grid grid-cols-4 gap-3 text-center">
-            {([1, 2, 3, 4] as PhaseYear[]).map((yr) => (
-              <div key={yr}>
-                <p className="text-xs text-stone-400">Year {yr}</p>
-                <p className={`text-sm font-bold ${YEAR_COLORS[yr].text} tabular-nums`}>
-                  €{fmt(totals[yr - 1])}
+          {/* Household profile warning */}
+          {!hasProfile && (
+            <div className="flex items-start gap-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+              <span className="text-amber-600 mt-0.5 shrink-0">⚠️</span>
+              <div>
+                <p className="text-sm font-medium text-amber-800">Household profile not configured</p>
+                <p className="text-xs text-amber-600 mt-0.5">
+                  Cash flow calculations use default values (€{fmt(hp.starting_cash)} starting cash,
+                  €{fmt(hp.monthly_savings_rate)}/mo savings). Go to Settings → Household Profile to enter your actual numbers.
                 </p>
+              </div>
+            </div>
+          )}
+
+          {/* 4-year phase bar */}
+          <div className="flex h-10 rounded-lg overflow-hidden border border-stone-200">
+            {([1, 2, 3, 4] as PhaseYear[]).map((yr) => (
+              <div
+                key={yr}
+                className={`${YEAR_COLORS[yr].bar} flex items-center justify-center flex-1 border-r border-white/30 last:border-r-0`}
+              >
+                <div className="text-center">
+                  <span className="text-xs font-bold text-white">Y{yr}</span>
+                  <span className="text-[10px] text-white/80 ml-1.5 hidden sm:inline">
+                    {YEAR_SUBTITLES[yr]}
+                  </span>
+                </div>
               </div>
             ))}
           </div>
 
-          {/* Annual cash summary */}
+          {/* Per-year total outflow cards */}
+          <div className="grid grid-cols-4 gap-3">
+            {([1, 2, 3, 4] as PhaseYear[]).map((yr) => {
+              const row = annualCash[yr - 1];
+              return (
+                <div key={yr} className={`rounded-lg p-3 ${YEAR_COLORS[yr].bg} border ${YEAR_COLORS[yr].border}`}>
+                  <p className="text-xs text-stone-500">Year {yr} total</p>
+                  <p className={`text-sm font-bold ${YEAR_COLORS[yr].text} tabular-nums`}>
+                    €{fmt(row.totalOutflow)}
+                  </p>
+                  <p className="text-[10px] text-stone-400 mt-0.5 tabular-nums">
+                    {row.purchaseCost > 0 && `Purchase €${fmt(row.purchaseCost)} + `}
+                    Reno €{fmt(row.renovationSpend)}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Annual cash flow table */}
           <div className="rounded-lg border border-stone-200 overflow-hidden">
-            <div className="px-4 py-2.5 bg-stone-50 border-b border-stone-100 flex items-center justify-between">
+            <div className="px-4 py-2.5 bg-stone-50 border-b border-stone-100">
               <p className="text-xs font-semibold text-stone-700">Annual Cash Flow</p>
-              <p className="text-xs text-stone-500">
-                Total net: <span className="font-bold text-stone-800">€{fmt(totalCashNeeded)}</span>
-              </p>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
@@ -313,6 +356,18 @@ export default function PhaseTimeline({ items, phaseAssignments, purchasePrice, 
                   </tr>
                 </thead>
                 <tbody>
+                  {/* Starting cash balance */}
+                  <tr className="border-b border-stone-200 bg-blue-50">
+                    <td className="px-3 py-2 text-blue-800 font-bold" colSpan={1}>
+                      Starting cash balance
+                    </td>
+                    <td className="text-right px-3 py-2 tabular-nums font-bold text-blue-800">
+                      €{fmt(hp.starting_cash)}
+                    </td>
+                    <td colSpan={3} />
+                  </tr>
+
+                  {/* Outflows */}
                   {purchasePrice > 0 && (
                     <tr className="border-b border-stone-50">
                       <td className="px-3 py-1.5 text-stone-600">Purchase</td>
@@ -332,7 +387,10 @@ export default function PhaseTimeline({ items, phaseAssignments, purchasePrice, 
                     ))}
                   </tr>
                   <tr className="border-b border-stone-50">
-                    <td className="px-3 py-1.5 text-stone-600">Carrying costs</td>
+                    <td className="px-3 py-1.5 text-stone-600">
+                      Carrying costs
+                      <span className="text-stone-400 ml-1">(€{fmt(DEFAULT_CARRYING_COST_MONTHLY)}/mo)</span>
+                    </td>
                     {annualCash.map((r) => (
                       <td key={r.year} className="text-right px-3 py-1.5 tabular-nums text-stone-500">
                         €{fmt(r.carryingCosts)}
@@ -347,27 +405,69 @@ export default function PhaseTimeline({ items, phaseAssignments, purchasePrice, 
                       </td>
                     ))}
                   </tr>
-                  <tr className="border-b border-stone-100 bg-stone-50">
-                    <td className="px-3 py-1.5 text-stone-700 font-medium">Total outflow</td>
+
+                  {/* Total outflow */}
+                  <tr className="border-b border-stone-200 bg-stone-50">
+                    <td className="px-3 py-2 text-stone-700 font-bold">Total outflow</td>
                     {annualCash.map((r) => (
-                      <td key={r.year} className="text-right px-3 py-1.5 tabular-nums font-semibold text-stone-800">
+                      <td key={r.year} className="text-right px-3 py-2 tabular-nums font-bold text-stone-800">
                         €{fmt(r.totalOutflow)}
                       </td>
                     ))}
                   </tr>
+
+                  {/* Funding inflow — main row */}
                   <tr className="border-b border-stone-50">
-                    <td className="px-3 py-1.5 text-emerald-700">Funding inflow</td>
+                    <td className="px-3 py-2 text-emerald-700 font-medium">Funding inflow</td>
                     {annualCash.map((r) => (
-                      <td key={r.year} className="text-right px-3 py-1.5 tabular-nums text-emerald-600">
+                      <td key={r.year} className="text-right px-3 py-2 tabular-nums font-semibold text-emerald-600">
                         +€{fmt(r.fundingInflow)}
                       </td>
                     ))}
                   </tr>
-                  <tr className="bg-amber-50">
-                    <td className="px-3 py-2 text-amber-800 font-bold">Net cash needed</td>
+
+                  {/* Funding detail sub-rows */}
+                  {(() => {
+                    // Collect unique inflow labels across all years
+                    const allLabels = new Set<string>();
+                    for (const row of annualCash) {
+                      for (const d of row.fundingDetails) {
+                        allLabels.add(d.label);
+                      }
+                    }
+                    return Array.from(allLabels).map((label) => (
+                      <tr key={label} className="border-b border-stone-50">
+                        <td className="px-3 py-1 pl-6 text-stone-400 italic text-[11px]">{label}</td>
+                        {annualCash.map((r) => {
+                          const detail = r.fundingDetails.find((d) => d.label === label);
+                          return (
+                            <td key={r.year} className="text-right px-3 py-1 tabular-nums text-stone-400 text-[11px]">
+                              {detail
+                                ? `€${fmt(detail.monthlyAmount)}/mo × ${detail.months}`
+                                : '—'}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ));
+                  })()}
+
+                  {/* Cash drawn from savings */}
+                  <tr className="border-b border-stone-200 bg-amber-50">
+                    <td className="px-3 py-2 text-amber-800 font-bold">Cash drawn from savings</td>
                     {annualCash.map((r) => (
-                      <td key={r.year} className={`text-right px-3 py-2 tabular-nums font-bold ${r.netCashNeeded > 0 ? 'text-red-700' : 'text-emerald-700'}`}>
-                        {r.netCashNeeded > 0 ? '' : '+'}€{fmt(Math.abs(r.netCashNeeded))}
+                      <td key={r.year} className={`text-right px-3 py-2 tabular-nums font-bold ${r.cashDrawn > 0 ? 'text-red-700' : 'text-emerald-700'}`}>
+                        {r.cashDrawn > 0 ? '' : '+'}€{fmt(Math.abs(r.cashDrawn))}
+                      </td>
+                    ))}
+                  </tr>
+
+                  {/* Running cash balance */}
+                  <tr className="bg-blue-50">
+                    <td className="px-3 py-2.5 text-blue-800 font-bold">Running cash balance</td>
+                    {annualCash.map((r) => (
+                      <td key={r.year} className={`text-right px-3 py-2.5 tabular-nums font-bold ${r.runningBalance >= 0 ? 'text-blue-800' : 'text-red-700'}`}>
+                        {r.runningBalance < 0 && '−'}€{fmt(Math.abs(r.runningBalance))}
                       </td>
                     ))}
                   </tr>
@@ -375,6 +475,20 @@ export default function PhaseTimeline({ items, phaseAssignments, purchasePrice, 
               </table>
             </div>
           </div>
+
+          {/* Liquidity warning */}
+          {annualCash.some((r) => r.runningBalance < 0) && (
+            <div className="flex items-start gap-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <span className="text-red-600 mt-0.5 shrink-0">🔴</span>
+              <div>
+                <p className="text-sm font-semibold text-red-800">Liquidity warning</p>
+                <p className="text-xs text-red-600 mt-0.5">
+                  Cash balance goes negative in Year {annualCash.find((r) => r.runningBalance < 0)?.year}.
+                  Review phasing or funding sources.
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Phase buckets */}
           <PhaseBucket phase={1} items={phase1} onMoveToPhase={handleMoveToPhase} />

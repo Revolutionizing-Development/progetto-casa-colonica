@@ -7,7 +7,7 @@ export function buildLocationIntelligencePrompt(
 ): string {
   const isHosting = projectType === 'farmstead_hosting';
 
-  return `You are an expert on Italian rural living, with deep knowledge of commune-level regulations, rural infrastructure, and the experience of foreign residents in rural Italy.
+  return `You are an expert on Italian rural living, with deep knowledge of commune-level regulations, rural infrastructure, transport networks, and the experience of foreign residents in rural Italy.
 
 Analyze the location of this property for practical livability and ${isHosting ? 'hospitality feasibility' : 'private residential use'}.
 
@@ -59,7 +59,26 @@ For each item provide: question, status (green/yellow/red), detail (1-2 sentence
 
 Do NOT include voltage/electrical differences between Italy and the US — the buyers are already aware of 220V/50Hz and will handle appliance conversion themselves.
 
-2. COMMUNITY PROFILE
+2. TRANSPORT HUBS
+Research the nearest transport connections for this commune/area. This is critical for a foreign buyer who will need to travel internationally regularly (especially to France and major European hubs).
+
+TRAIN STATIONS:
+- Identify the 1-2 nearest train stations with intercity/regional service (not just local commuter stops)
+- For each station, list the key direct destinations with approximate travel times (e.g., "Rome 1h45, Florence 2h, Perugia 45min")
+- Include the station's approximate coordinates, estimated drive time and distance from the property
+
+AIRPORTS:
+- Identify ALL airports reachable within approximately 2.5 hours drive time from the property
+- For each airport, list:
+  - Name and IATA code
+  - Approximate drive time and distance from property
+  - Key airlines operating there
+  - Key destinations (especially: flights to France, flights to major European hubs like London, Amsterdam, Frankfurt, Paris)
+- Approximate coordinates for each airport
+- Order by drive time (nearest first)
+- Typically include: nearest regional airport, nearest major hub (Florence/Rome/Milan), any other airports within range
+
+3. COMMUNITY PROFILE
 Assess this commune/area for:
 - Expat presence: are there English-speaking residents? International community?
 - Demographics: is this a young/aging town? Population trend?
@@ -77,10 +96,10 @@ Respond using the location_intelligence tool.`;
 
 export const LOCATION_INTELLIGENCE_TOOL_SCHEMA = {
   name: 'location_intelligence',
-  description: 'Return location intelligence analysis for an Italian property commune.',
+  description: 'Return location intelligence analysis for an Italian property commune, including regulatory feasibility, transport hubs, and community profile.',
   input_schema: {
     type: 'object' as const,
-    required: ['regulatory_checklist', 'community'],
+    required: ['regulatory_checklist', 'transport_hubs', 'community'],
     properties: {
       regulatory_checklist: {
         type: 'array',
@@ -92,6 +111,27 @@ export const LOCATION_INTELLIGENCE_TOOL_SCHEMA = {
             status: { type: 'string', enum: ['green', 'yellow', 'red'] },
             detail: { type: 'string' },
             source_hint: { type: 'string' },
+          },
+        },
+      },
+      transport_hubs: {
+        type: 'array',
+        description: 'Train stations and airports with connection details. Include 1-2 intercity train stations and ALL airports within ~2.5 hours drive.',
+        items: {
+          type: 'object',
+          required: ['type', 'name', 'drive_minutes', 'distance_km', 'lng', 'lat', 'connections'],
+          properties: {
+            type: { type: 'string', enum: ['train_station', 'airport'] },
+            name: { type: 'string', description: 'Station/airport name (e.g., "Chiusi-Chianciano Terme" or "Perugia San Francesco (PEG)")' },
+            drive_minutes: { type: 'integer', description: 'Estimated drive time in minutes from the property' },
+            distance_km: { type: 'number', description: 'Approximate driving distance in km' },
+            lng: { type: 'number', description: 'Longitude of the station/airport' },
+            lat: { type: 'number', description: 'Latitude of the station/airport' },
+            connections: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'For train stations: key direct destinations with times (e.g., "Rome Termini 1h45", "Florence SMN 2h"). For airports: key airlines and routes (e.g., "Ryanair: London, Brussels, Bucharest", "ITA Airways: Rome hub connections").',
+            },
           },
         },
       },

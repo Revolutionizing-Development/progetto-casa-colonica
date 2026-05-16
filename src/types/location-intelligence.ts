@@ -18,6 +18,16 @@ export interface DistanceCard {
   lat: number;
 }
 
+export interface TransportHub {
+  type: 'train_station' | 'airport';
+  name: string;
+  drive_minutes: number;
+  distance_km: number;
+  lng: number;
+  lat: number;
+  connections: string[];
+}
+
 export interface CommunityProfile {
   expat_presence: string;
   demographics: string;
@@ -33,6 +43,7 @@ export interface LocationIntelligence {
   generated_at: string;
   regulatory_checklist: RegulatoryItem[];
   distances: DistanceCard[];
+  transport_hubs: TransportHub[];
   community: CommunityProfile;
   isochrone_minutes: number[];
 }

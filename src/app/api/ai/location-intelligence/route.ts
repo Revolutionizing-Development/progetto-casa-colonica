@@ -8,21 +8,20 @@ import {
 } from '@/lib/ai/prompts/location-intelligence';
 import type { PropertyRow } from '@/app/actions/properties';
 import type { ProjectType } from '@/types/project';
-import type { LocationIntelligence, DistanceCard } from '@/types/location-intelligence';
+import type { LocationIntelligence, DistanceCard, TransportHub } from '@/types/location-intelligence';
 import type Anthropic from '@anthropic-ai/sdk';
 
 export const maxDuration = 300;
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
-const POI_CATEGORIES: { category: string; mapbox_query: string }[] = [
+/** POI categories for basic services (non-transport) */
+const SERVICE_CATEGORIES: { category: string; mapbox_query: string }[] = [
   { category: 'supermarket', mapbox_query: 'supermarket' },
   { category: 'bakery', mapbox_query: 'bakery' },
   { category: 'pharmacy', mapbox_query: 'pharmacy' },
   { category: 'hospital', mapbox_query: 'hospital' },
   { category: 'veterinarian', mapbox_query: 'veterinarian' },
-  { category: 'train_station', mapbox_query: 'train station' },
-  { category: 'airport', mapbox_query: 'airport' },
 ];
 
 async function fetchNearestPOI(
@@ -71,6 +70,24 @@ async function fetchDriveDistance(
   }
 }
 
+/** Verify and refine AI-provided transport hub coordinates using Mapbox driving distance */
+async function refineTransportHub(
+  propLng: number,
+  propLat: number,
+  hub: TransportHub,
+): Promise<TransportHub> {
+  // Try to get actual drive distance from Mapbox to refine AI estimates
+  const drive = await fetchDriveDistance(propLng, propLat, hub.lng, hub.lat);
+  if (drive) {
+    return {
+      ...hub,
+      drive_minutes: drive.minutes,
+      distance_km: drive.km,
+    };
+  }
+  return hub;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { userId } = await auth();
@@ -96,11 +113,15 @@ export async function POST(req: NextRequest) {
       .from('projects').select('project_type').eq('id', prop.project_id).single();
     const projectType: ProjectType = (project?.project_type as ProjectType) ?? 'farmstead_hosting';
 
-    // Step 1: AI regulatory + community analysis
+    // Step 1: AI regulatory + community + transport hub analysis
     const prompt = buildLocationIntelligencePrompt(prop, projectType);
     const anthropic = getAnthropicClient();
 
-    let aiResult: { regulatory_checklist: LocationIntelligence['regulatory_checklist']; community: LocationIntelligence['community'] };
+    let aiResult: {
+      regulatory_checklist: LocationIntelligence['regulatory_checklist'];
+      community: LocationIntelligence['community'];
+      transport_hubs: TransportHub[];
+    };
 
     try {
       const stream = anthropic.messages.stream({
@@ -122,12 +143,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `AI analysis failed: ${(err as Error).message}` }, { status: 500 });
     }
 
-    // Step 2: Distance cards via Mapbox
+    // Step 2: Service distance cards via Mapbox (non-transport POIs)
     const distances: DistanceCard[] = [];
 
     if (prop.lat != null && prop.lng != null && MAPBOX_TOKEN) {
       const poiResults = await Promise.all(
-        POI_CATEGORIES.map(async ({ category, mapbox_query }) => {
+        SERVICE_CATEGORIES.map(async ({ category, mapbox_query }) => {
           const poi = await fetchNearestPOI(prop.lng!, prop.lat!, mapbox_query);
           if (!poi) return null;
           const drive = await fetchDriveDistance(prop.lng!, prop.lat!, poi.lng, poi.lat);
@@ -147,11 +168,21 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Step 3: Build and save
+    // Step 3: Refine transport hub drive times using Mapbox
+    let transportHubs: TransportHub[] = aiResult.transport_hubs ?? [];
+
+    if (prop.lat != null && prop.lng != null && MAPBOX_TOKEN) {
+      transportHubs = await Promise.all(
+        transportHubs.map((hub) => refineTransportHub(prop.lng!, prop.lat!, hub)),
+      );
+    }
+
+    // Step 4: Build and save
     const intelligence: LocationIntelligence = {
       generated_at: new Date().toISOString(),
       regulatory_checklist: aiResult.regulatory_checklist ?? [],
       distances,
+      transport_hubs: transportHubs,
       community: aiResult.community,
       isochrone_minutes: [10, 20, 30],
     };

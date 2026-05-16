@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import type { LocationIntelligence, RegulatoryLight, DistanceCard } from '@/types/location-intelligence';
+import type { LocationIntelligence, RegulatoryLight, DistanceCard, TransportHub } from '@/types/location-intelligence';
 import { DISTANCE_CATEGORY_LABELS, type DistanceCategory } from '@/types/location-intelligence';
 
 interface Props {
@@ -39,6 +39,30 @@ function DistanceIcon({ category }: { category: string }) {
   return <span className="text-lg">{icons[category] ?? '\u{1F4CD}'}</span>;
 }
 
+const ROUTE_COLORS = {
+  service: '#7a8c5e',
+  train_station: '#3b82f6',
+  airport: '#6366f1',
+} as const;
+
+async function fetchRouteGeometry(
+  fromLng: number,
+  fromLat: number,
+  toLng: number,
+  toLat: number,
+  token: string,
+): Promise<GeoJSON.LineString | null> {
+  try {
+    const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${fromLng},${fromLat};${toLng},${toLat}?geometries=geojson&access_token=${token}`;
+    const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.routes?.[0]?.geometry ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export default function LocationLifePanel({ propertyId, lat, lng, commune, initial }: Props) {
   const [status, setStatus] = useState<Status>(initial ? 'done' : 'idle');
   const [data, setData] = useState<LocationIntelligence | null>(initial);
@@ -69,7 +93,11 @@ export default function LocationLifePanel({ propertyId, lat, lng, commune, initi
     }
   }
 
-  // Isochrone map
+  const transportHubs = data?.transport_hubs ?? [];
+  const trainStations = transportHubs.filter((h) => h.type === 'train_station');
+  const airports = transportHubs.filter((h) => h.type === 'airport');
+
+  // Map with isochrones, POI markers, transport hubs, and driving routes
   useEffect(() => {
     if (!data || lat == null || lng == null || !mapContainer.current) return;
     if (mapInstance.current) return;
@@ -90,12 +118,12 @@ export default function LocationLifePanel({ propertyId, lat, lng, commune, initi
       m.addControl(new mapboxgl.NavigationControl(), 'top-right');
 
       m.on('load', async () => {
-        // Property marker
+        // ── Property marker ──
         new mapboxgl.Marker({ color: '#c0622f' })
           .setLngLat([lng, lat])
           .addTo(m);
 
-        // Distance POI markers
+        // ── Service POI markers (green) ──
         for (const d of data.distances) {
           const el = document.createElement('div');
           el.style.cssText = 'width:24px;height:24px;background:#fff;border:2px solid #7a8c5e;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;cursor:pointer';
@@ -114,15 +142,41 @@ export default function LocationLifePanel({ propertyId, lat, lng, commune, initi
             .addTo(m);
         }
 
-        // Isochrone overlays
+        // ── Transport hub markers ──
+        const hubs = data.transport_hubs ?? [];
+        for (const hub of hubs) {
+          const isTrain = hub.type === 'train_station';
+          const el = document.createElement('div');
+          el.style.cssText = `width:30px;height:30px;background:${isTrain ? '#eff6ff' : '#eef2ff'};border:2px solid ${isTrain ? '#3b82f6' : '#6366f1'};border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,0.15)`;
+          el.textContent = isTrain ? '\u{1F689}' : '\u{2708}️';
+
+          const connectionsHtml = hub.connections.length > 0
+            ? `<div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:3px">${hub.connections.map((c) => `<span style="background:${isTrain ? '#dbeafe' : '#e0e7ff'};color:${isTrain ? '#1e40af' : '#3730a3'};padding:1px 6px;border-radius:9999px;font-size:10px">${c}</span>`).join('')}</div>`
+            : '';
+
+          const popup = new mapboxgl.Popup({ offset: 18, closeButton: false, maxWidth: '280px' }).setHTML(
+            `<div style="font-family:system-ui;font-size:12px;line-height:1.4">
+              <strong>${isTrain ? '\u{1F689}' : '\u{2708}️'} ${hub.name}</strong><br/>
+              ${hub.drive_minutes} min drive &middot; ${hub.distance_km} km
+              ${connectionsHtml}
+            </div>`,
+          );
+
+          new mapboxgl.Marker(el)
+            .setLngLat([hub.lng, hub.lat])
+            .setPopup(popup)
+            .addTo(m);
+        }
+
+        // ── Isochrone overlays ──
         const ISOCHRONE_COLORS = ['rgba(192,98,47,0.08)', 'rgba(192,98,47,0.05)', 'rgba(192,98,47,0.03)'];
         const ISOCHRONE_BORDERS = ['rgba(192,98,47,0.4)', 'rgba(192,98,47,0.25)', 'rgba(192,98,47,0.15)'];
 
         for (let i = data.isochrone_minutes.length - 1; i >= 0; i--) {
           const mins = data.isochrone_minutes[i];
           try {
-            const url = `https://api.mapbox.com/isochrone/v1/mapbox/driving/${lng},${lat}?contours_minutes=${mins}&polygons=true&access_token=${token}`;
-            const res = await fetch(url);
+            const isoUrl = `https://api.mapbox.com/isochrone/v1/mapbox/driving/${lng},${lat}?contours_minutes=${mins}&polygons=true&access_token=${token}`;
+            const res = await fetch(isoUrl);
             if (!res.ok) continue;
             const geojson = await res.json();
 
@@ -144,29 +198,50 @@ export default function LocationLifePanel({ propertyId, lat, lng, commune, initi
           }
         }
 
-        // Fit to largest isochrone
-        const largestMins = data.isochrone_minutes[data.isochrone_minutes.length - 1];
-        const src = m.getSource(`isochrone-${largestMins}`);
-        if (src && 'type' in src && src.type === 'geojson') {
-          try {
-            const bounds = new mapboxgl.LngLatBounds();
-            const geoData = (src as mapboxgl.GeoJSONSource)._data;
-            if (geoData && typeof geoData === 'object' && 'features' in geoData) {
-              for (const f of (geoData as GeoJSON.FeatureCollection).features) {
-                if (f.geometry.type === 'Polygon') {
-                  for (const ring of f.geometry.coordinates) {
-                    for (const coord of ring) {
-                      bounds.extend(coord as [number, number]);
-                    }
-                  }
-                }
-              }
-              m.fitBounds(bounds, { padding: 40 });
-            }
-          } catch {
-            // keep default zoom
-          }
+        // ── Driving route polylines ──
+        const routeTargets = [
+          ...data.distances.map((d) => ({
+            lng: d.lng, lat: d.lat, color: ROUTE_COLORS.service, id: `svc-${d.category}`, width: 2,
+          })),
+          ...hubs.map((h, i) => ({
+            lng: h.lng, lat: h.lat,
+            color: h.type === 'train_station' ? ROUTE_COLORS.train_station : ROUTE_COLORS.airport,
+            id: `hub-${i}`, width: 2.5,
+          })),
+        ];
+
+        const routeResults = await Promise.all(
+          routeTargets.map(async (pt) => {
+            const geometry = await fetchRouteGeometry(lng, lat, pt.lng, pt.lat, token);
+            return { ...pt, geometry };
+          }),
+        );
+
+        for (const route of routeResults) {
+          if (!route.geometry) continue;
+          m.addSource(`route-${route.id}`, {
+            type: 'geojson',
+            data: { type: 'Feature' as const, properties: {}, geometry: route.geometry },
+          });
+          m.addLayer({
+            id: `route-line-${route.id}`,
+            type: 'line',
+            source: `route-${route.id}`,
+            paint: {
+              'line-color': route.color,
+              'line-width': route.width,
+              'line-opacity': 0.45,
+            },
+            layout: { 'line-cap': 'round', 'line-join': 'round' },
+          });
         }
+
+        // ── Fit bounds to include all markers ──
+        const bounds = new mapboxgl.LngLatBounds();
+        bounds.extend([lng, lat]);
+        for (const d of data.distances) bounds.extend([d.lng, d.lat]);
+        for (const h of hubs) bounds.extend([h.lng, h.lat]);
+        m.fitBounds(bounds, { padding: 50, maxZoom: 12 });
       });
 
       mapInstance.current = m;
@@ -279,6 +354,81 @@ export default function LocationLifePanel({ propertyId, lat, lng, commune, initi
             </div>
           )}
 
+          {/* Transport Connections */}
+          {transportHubs.length > 0 && (
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold text-stone-900 uppercase tracking-wide">
+                Transport Connections
+              </h3>
+
+              {/* Train Stations */}
+              {trainStations.length > 0 && (
+                <div className="space-y-2">
+                  {trainStations.map((hub, i) => (
+                    <div key={`train-${i}`} className="rounded-lg border border-blue-200 bg-blue-50/50 px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg shrink-0">{'\u{1F689}'}</span>
+                        <span className="text-sm font-semibold text-stone-900">{hub.name}</span>
+                        <span className="ml-auto flex items-baseline gap-2">
+                          <span className={`text-base font-bold tabular-nums ${
+                            hub.drive_minutes <= 20 ? 'text-green-700' :
+                            hub.drive_minutes <= 45 ? 'text-blue-700' :
+                            'text-amber-700'
+                          }`}>
+                            {hub.drive_minutes} min
+                          </span>
+                          <span className="text-xs text-stone-400">{hub.distance_km} km</span>
+                        </span>
+                      </div>
+                      {hub.connections.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mt-2">
+                          {hub.connections.map((c, j) => (
+                            <span key={j} className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full">
+                              {c}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Airports */}
+              {airports.length > 0 && (
+                <div className="space-y-2">
+                  {airports.map((hub, i) => (
+                    <div key={`air-${i}`} className="rounded-lg border border-indigo-200 bg-indigo-50/30 px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg shrink-0">{'\u{2708}'}️</span>
+                        <span className="text-sm font-semibold text-stone-900">{hub.name}</span>
+                        <span className="ml-auto flex items-baseline gap-2">
+                          <span className={`text-base font-bold tabular-nums ${
+                            hub.drive_minutes <= 60 ? 'text-green-700' :
+                            hub.drive_minutes <= 120 ? 'text-indigo-700' :
+                            'text-amber-700'
+                          }`}>
+                            {hub.drive_minutes} min
+                          </span>
+                          <span className="text-xs text-stone-400">{hub.distance_km} km</span>
+                        </span>
+                      </div>
+                      {hub.connections.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mt-2">
+                          {hub.connections.map((c, j) => (
+                            <span key={j} className="px-2 py-0.5 bg-indigo-100 text-indigo-800 text-xs rounded-full">
+                              {c}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Community Profile */}
           <div className="space-y-3">
             <h3 className="text-sm font-semibold text-stone-900 uppercase tracking-wide">
@@ -317,8 +467,8 @@ export default function LocationLifePanel({ propertyId, lat, lng, commune, initi
               </h3>
               <div className="rounded-xl border border-stone-200 overflow-hidden">
                 <div ref={mapContainer} style={{ height: 440 }} className="w-full" />
-                <div className="px-4 py-2.5 bg-stone-50 border-t border-stone-100 flex items-center gap-4">
-                  <span className="text-xs text-stone-400">Drive time rings:</span>
+                <div className="px-4 py-2.5 bg-stone-50 border-t border-stone-100 flex flex-wrap items-center gap-x-4 gap-y-1">
+                  <span className="text-xs text-stone-400">Isochrones:</span>
                   {data.isochrone_minutes.map((m, i) => (
                     <span key={m} className="flex items-center gap-1.5 text-xs text-stone-500">
                       <span
@@ -331,6 +481,20 @@ export default function LocationLifePanel({ propertyId, lat, lng, commune, initi
                       {m} min
                     </span>
                   ))}
+                  <span className="text-xs text-stone-300">|</span>
+                  <span className="text-xs text-stone-400">Routes:</span>
+                  <span className="flex items-center gap-1.5 text-xs text-stone-500">
+                    <span className="w-4 h-0.5 rounded" style={{ backgroundColor: ROUTE_COLORS.service }} />
+                    Services
+                  </span>
+                  <span className="flex items-center gap-1.5 text-xs text-stone-500">
+                    <span className="w-4 h-0.5 rounded" style={{ backgroundColor: ROUTE_COLORS.train_station }} />
+                    Train
+                  </span>
+                  <span className="flex items-center gap-1.5 text-xs text-stone-500">
+                    <span className="w-4 h-0.5 rounded" style={{ backgroundColor: ROUTE_COLORS.airport }} />
+                    Airport
+                  </span>
                 </div>
               </div>
             </div>
