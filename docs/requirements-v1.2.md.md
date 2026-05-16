@@ -218,6 +218,22 @@ Complete investment picture per renovation scenario. Includes: purchase costs (w
 
 These costs are toggleable per farm feature — if you remove goats from the scenario, the operating cost drops accordingly. The financial model recalculates income projections when farmstead costs change.
 
+**Default financial view: Annual Operating P&L (not investment break-even)**
+
+The financial model defaults to showing annual operating income vs annual operating costs. This answers the question buyers actually ask: "Can I afford to live there?" not "When do I recoup my investment." The purchase + renovation is an asset acquisition — the buyer owns a €700K+ property. The operating P&L tells them whether it sustains itself.
+
+| View | Display | Priority |
+|------|---------|----------|
+| **Operating P&L (default)** | Annual income (5 lines) vs annual operating costs = net operating income | Primary — always visible |
+| **Monthly operating cash flow** | Net income per month (€2,250–3,650/mo at stabilization) | Primary — headline number |
+| **Sustainability indicator** | "Self-sustaining from Year 3" green badge | Primary — on property detail page |
+| **Burn rate** | Monthly cost during renovation (pre-income period) | Primary — during renovation phase |
+| Investment break-even | "~18 years from rental income only" | Secondary — collapsed toggle |
+| Investment break-even with appreciation | "~8 years including 3-5% annual appreciation" | Secondary — collapsed toggle |
+| Asset value tracker | Current estimated property value (purchase + renovation + appreciation) | Secondary — collapsed toggle |
+
+**Operating break-even is Year 3** — the year annual income first exceeds annual operating costs. This is the number that matters, not the 18-year investment payback.
+
 ### 4.6 Cost Tracking & Tax Compliance — ELEVATED TO MVP
 
 **Purpose:** Track every euro spent during renovation, protect tax deductions, confirm DIY savings, and prepare tax-ready documentation for the commercialista.
@@ -685,6 +701,25 @@ As a property owner, I want to configure house rules (quiet hours, check-in time
 
 ---
 
-*End of Requirements v1.1*
+## 10. Amendment Log
+
+| Version | Date | Change | Rationale |
+|---------|------|--------|-----------|
+| 1.2.1 | 2026-05-15 | Implemented scoring matrix (11 criteria, AI-generated, configurable weights). ScoringPanel on Overview page. Compare page with multi-property matrix. | Build priority #11 |
+| 1.2.2 | 2026-05-15 | Implemented renovation scenarios (Basic + Lifestyle via Claude API, per-call generation, 8192 max_tokens). ScenariosPanel with expandable phases and line item tables. | Build priority #9 |
+| 1.2.3 | 2026-05-15 | Implemented financial model CostsPanel — now defaults to Operating P&L per N12. Five income lines (accommodation, wine, cooking, farm, olive oil). Farmstead ongoing costs (€3-6K/yr) toggleable. Sustainability headline. Investment break-even as collapsed secondary toggle. | Build priority #10, Constitution N12 |
+| 1.2.4 | 2026-05-15 | Implemented Mapbox GL JS property map on project page. Pipeline-stage-colored markers, popups, auto-fit bounds. Graceful fallback for missing token or coordinates. | Build priority #12 |
+| 1.2.5 | 2026-05-15 | Implemented invoice capture with tax compliance (N9). InvoicePanel with form, IVA rates, tax bonus selector, payment method validation, bonifico parlante auto-generation. Tax deduction tracker with progress bars per bonus type. Invoice page at /costs/invoice. | Build priority #13 |
+| 1.2.6 | 2026-05-15 | Implemented Budget vs Actual panel. Compares scenario line items against actual invoices by phase. Variance tracking, DIY material savings, contingency headroom, unmatched invoice detection. | Build priority #14 |
+| 1.2.7 | 2026-05-15 | Implemented Commercialista Export. CSV download with Italian headers (BOM for Excel). Bonus summary table, deductible invoice list, ENEA status warning, print support. | Build priority #15 |
+| 1.2.8 | 2026-05-15 | Implemented Funding Sources panel with CRUD. USD→EUR conversion, status workflow (planned→in_progress→complete→received), progress bar against total investment. | Build priority #16 |
+| 1.2.9 | 2026-05-15 | Implemented Operational Checklists — 33 Italy-specific items across 5 phases (pre-purchase through ongoing operations). Bilingual titles, regulatory flags, deadlines, priority levels. localStorage persistence. Auto-highlights current phase from pipeline stage. New Checklist tab on all property pages. | Build priority #17 |
+| 1.2.10 | 2026-05-15 | Added Checklist tab to property navigation (all 7 pages updated). Renderings placeholder page (Phase 2) already in place. | Tab navigation consistency |
+| 1.2.11 | 2026-05-15 | Implemented Phase 2: GPT Image visual rendering engine. OpenAI image generation API integration (`gpt-image-1`, 1536x1024, high quality). Region-aware prompt builder (10 Italian regions mapped to architectural styles). 7 rendering types (exterior front/rear, courtyard, interior living/kitchen/airbnb, aerial). Supabase Storage upload for generated images. RenderingsPanel with scenario filtering, lightbox, delete confirmation. N6 enforced: renderings require a renovation scenario. | Constitution P2 (vision leads), N6 (no rendering without renovation plan) |
+| 1.2.12 | 2026-05-15 | Integrated multi-agent estimation engine (GitHub issue #2). Claude + GPT-4o + Gemini run in parallel, Zod-validated outputs, consensus synthesis with per-line-item confidence levels. Property mapper (DB row → PropertyInput). API route at `/api/ai/estimate-renovation`. DB migration 017 adds `divergence_report`, `confidence_score`, `agent_usage` columns to `renovation_scenarios`. "Multi-Agent Estimate" button on ScenariosPanel. DivergenceReport component with confidence breakdown, agent comparison bars, flagged item cards. Constitution N2 (contingency), N4 (regulated work), N8 (confidence labels), N10 (guest separation) enforced by engine. | GitHub issue #2, Constitution N2/N4/N8/N10 |
+
+---
+
+*End of Requirements v1.2*
 
 *This document, combined with the Constitution v1.1 and CLAUDE.md, defines the complete product specification for Progetto Casa Colonica.*

@@ -1,5 +1,6 @@
 import { REGION_SEISMIC_ZONES, BOAR_RISK_REGIONS, type ItalianRegion } from '@/config/regions';
 import type { PropertyRow } from '@/app/actions/properties';
+import type { ProjectType } from '@/types/project';
 
 export interface LandAlert {
   threshold_ha: number;
@@ -53,7 +54,7 @@ export function computeContextualFacts(property: PropertyRow): {
   return { seismicZone, wildBoarRisk, boarFencingCostEstimate, landAlerts };
 }
 
-export function buildAnalysisPrompt(property: PropertyRow): string {
+export function buildAnalysisPrompt(property: PropertyRow, projectType: ProjectType = 'farmstead_hosting'): string {
   const landHa = (property.sqm_land / 10000).toFixed(2);
   const { seismicZone, wildBoarRisk, landAlerts } = computeContextualFacts(property);
 
@@ -86,9 +87,25 @@ export function buildAnalysisPrompt(property: PropertyRow): string {
       ? landAlerts.map((a) => `  • ${a.alert}: ${a.implication}`).join('\n')
       : '  • None (land under 1 ha)';
 
-  return `You are a senior Italian property analyst with 20+ years of experience evaluating rural farmhouses for foreign buyers seeking combined living and hospitality use (Airbnb / agriturismo). You understand Italian building law (DPR 380/2001), landscape protection (D.Lgs 42/2004), short-term rental regulations, agriturismo law (L. 96/2006), seismic risk, and rural renovation practice.
+  const projectContext = projectType === 'private_homestead'
+    ? 'evaluating rural farmhouses for foreign buyers seeking a private family home — no guest hosting, no rental income. Focus on livability, personal comfort, and long-term value.'
+    : 'evaluating rural farmhouses for foreign buyers seeking combined living and hospitality use (Airbnb / agriturismo).';
+
+  const guestSeparationSection = projectType === 'farmstead_hosting'
+    ? `\nGUEST SEPARATION (Constitution requirement — hard check):
+Per N10: guest apartments must have independent entrances, separate outdoor seating, no sightlines to owner spaces, sound insulation. Assess whether this property's described layout can feasibly support this. Flag early if impossible (e.g., single-entrance tower house).`
+    : `\nGUEST SEPARATION:
+This is a private homestead project — guest separation is not required. Set guest_separation_feasible to false, guest_separation_cost_min/max to 0, and note "Not applicable — private homestead project".`;
+
+  const taxNote = projectType === 'farmstead_hosting'
+    ? '\nTAX REGIME NOTE: Cedolare secca (21%/26%) applies to locazione turistica. Agriturismo uses a different flat-rate regime (IVA 50% deduction). Evaluate which path suits this property\'s land characteristics and intended use.'
+    : '\nTAX REGIME NOTE: Evaluate IMU classification and any tax advantages for primary residence (prima casa) if the buyer intends to establish residency.';
+
+  return `You are a senior Italian property analyst with 20+ years of experience ${projectContext} You understand Italian building law (DPR 380/2001), landscape protection (D.Lgs 42/2004), short-term rental regulations, agriturismo law (L. 96/2006), seismic risk, and rural renovation practice.
 
 Analyze the following Italian farmhouse property. Use the tool to return a structured assessment.
+
+PROJECT TYPE: ${projectType === 'private_homestead' ? 'PRIVATE HOMESTEAD — no guests, no income' : 'FARMSTEAD + HOSTING — Airbnb / agriturismo income'}
 
 PROPERTY DATA
 ═══════════════════════════════════════════════════════
@@ -117,9 +134,7 @@ ANALYSIS INSTRUCTIONS
 STRUCTURAL ASSESSMENT:
 Score condition 1–10 (1=ruin, 5=livable with work, 8=good, 10=pristine).
 Italian farmhouses from pre-1900: assume structural walls are solid stone but expect: cracked plaster, deteriorated roof tiles, absent insulation, outdated/absent electrical and plumbing, old septic systems. Focus on what's implied by year built, energy class, and listing description.
-
-GUEST SEPARATION (Constitution requirement — hard check):
-Per N10: guest apartments must have independent entrances, separate outdoor seating, no sightlines to owner spaces, sound insulation. Assess whether this property's described layout can feasibly support this. Flag early if impossible (e.g., single-entrance tower house).
+${guestSeparationSection}
 
 REGULATORY RISK — 10 categories, score red/yellow/green:
 • red = blocking concern — must resolve before proceeding
@@ -127,8 +142,7 @@ REGULATORY RISK — 10 categories, score red/yellow/green:
 • green = likely clear — no significant risk identified
 
 Be appropriately conservative. When uncertain, prefer yellow over green. Use the pre-computed seismic zone — do not infer it from region name.
-
-TAX REGIME NOTE: Cedolare secca (21%/26%) applies to locazione turistica. Agriturismo uses a different flat-rate regime (IVA 50% deduction). Evaluate which path suits this property's land characteristics and intended use.
+${taxNote}
 
 OVERALL RISK: If ANY category is red, overall_risk must be red.`;
 }

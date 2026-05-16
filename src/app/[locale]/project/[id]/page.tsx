@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { getProject } from '@/app/actions/projects';
 import { getProperties, type PropertyRow } from '@/app/actions/properties';
 import EditProjectForm from '@/components/project/EditProjectForm';
+import PropertyMap from '@/components/map/PropertyMap';
 
 interface Props {
   params: { locale: string; id: string };
@@ -56,6 +57,17 @@ export default async function ProjectPage({ params: { locale, id } }: Props) {
       {/* Project header + inline edit */}
       <EditProjectForm project={project} locale={locale} />
 
+      {/* Project type badge */}
+      <div className="flex items-center gap-2 -mt-4">
+        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
+          project.project_type === 'private_homestead'
+            ? 'bg-stone-100 text-stone-700'
+            : 'bg-amber-100 text-amber-800'
+        }`}>
+          {project.project_type === 'private_homestead' ? 'Private Homestead' : 'Farmstead + Hosting'}
+        </span>
+      </div>
+
       {/* Quick nav */}
       <div className="flex gap-3 border-t border-stone-100 pt-6 flex-wrap">
         <Link
@@ -71,6 +83,9 @@ export default async function ProjectPage({ params: { locale, id } }: Props) {
           Compare Properties
         </Link>
       </div>
+
+      {/* Map */}
+      <PropertyMap properties={properties} locale={locale} />
 
       {/* Properties */}
       <section className="space-y-4">

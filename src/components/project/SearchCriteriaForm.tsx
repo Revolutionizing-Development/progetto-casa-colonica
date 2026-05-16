@@ -1,12 +1,15 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useTransition } from 'react';
+import { useFormState } from 'react-dom';
 import { upsertSearchCriteria, type SearchCriteriaRow, type ActionResult } from '@/app/actions/search-criteria';
 import { ITALIAN_REGIONS } from '@/config/regions';
+import type { ProjectType } from '@/types/project';
 
 interface Props {
   projectId: string;
   initial: SearchCriteriaRow | null;
+  projectType?: ProjectType;
 }
 
 const initialState: ActionResult | null = null;
@@ -49,12 +52,19 @@ function SqmInput({ name, label, defaultValue }: { name: string; label: string; 
   );
 }
 
-export default function SearchCriteriaForm({ projectId, initial }: Props) {
+export default function SearchCriteriaForm({ projectId, initial, projectType = 'farmstead_hosting' }: Props) {
   const action = upsertSearchCriteria.bind(null, projectId);
-  const [state, formAction, isPending] = useActionState(action, initialState);
+  const [isPending, startTransition] = useTransition();
+  const [state, formAction] = useFormState(action, initialState);
+
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const data = new FormData(e.currentTarget);
+    startTransition(() => { formAction(data); });
+  }
 
   return (
-    <form action={formAction} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6">
       {state?.error && (
         <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded">{state.error}</p>
       )}
@@ -108,7 +118,9 @@ export default function SearchCriteriaForm({ projectId, initial }: Props) {
             { name: 'must_have_olive_grove', label: 'Must have olive grove' },
             { name: 'must_allow_animals', label: 'Must allow animals (livestock)' },
             { name: 'must_have_outbuildings', label: 'Must have outbuildings' },
-            { name: 'requires_agriturismo_eligible', label: 'Must be Agriturismo eligible' },
+            ...(projectType === 'farmstead_hosting'
+              ? [{ name: 'requires_agriturismo_eligible', label: 'Must be Agriturismo eligible' }]
+              : []),
           ].map(({ name, label }) => (
             <label key={name} className="flex items-center gap-2 text-sm text-stone-700 cursor-pointer">
               <input

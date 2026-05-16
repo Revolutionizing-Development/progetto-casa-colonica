@@ -42,7 +42,7 @@ export default async function CriteriaPage({ params: { locale, id } }: Props) {
             Define what you are looking for. Properties will be evaluated against these parameters.
           </p>
         </div>
-        <SearchCriteriaForm projectId={id} initial={criteria} />
+        <SearchCriteriaForm projectId={id} initial={criteria} projectType={project.project_type} />
       </section>
 
       <hr className="border-stone-100" />
@@ -56,7 +56,7 @@ export default async function CriteriaPage({ params: { locale, id } }: Props) {
             100%.
           </p>
         </div>
-        <ScoringWeightsForm projectId={id} initial={weights} />
+        <ScoringWeightsForm projectId={id} initial={weights} projectType={project.project_type} />
       </section>
     </main>
   );

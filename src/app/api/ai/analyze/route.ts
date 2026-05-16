@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/server';
 import { getAnthropicClient, ANALYSIS_MODEL } from '@/lib/ai/claude';
 import {
   buildAnalysisPrompt,
@@ -8,8 +8,13 @@ import {
   ANALYSIS_TOOL_SCHEMA,
 } from '@/lib/ai/prompts/analyze-property';
 import type { PropertyRow } from '@/app/actions/properties';
+import type { ProjectType } from '@/types/project';
+
+// Allow up to 5 minutes — Claude with a large tool schema takes 60-120s
+export const maxDuration = 300;
 
 export async function POST(req: NextRequest) {
+  try {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
@@ -23,7 +28,7 @@ export async function POST(req: NextRequest) {
   const { propertyId } = body;
   if (!propertyId) return NextResponse.json({ error: 'propertyId is required' }, { status: 400 });
 
-  const supabase = createClient();
+  const supabase = createAdminClient();
 
   // Verify ownership
   const { data: property, error: propError } = await supabase
@@ -39,36 +44,57 @@ export async function POST(req: NextRequest) {
 
   const typedProperty = property as PropertyRow;
 
+  // Load project type
+  const { data: project } = await supabase
+    .from('projects').select('project_type').eq('id', typedProperty.project_id).single();
+  const projectType: ProjectType = (project?.project_type as ProjectType) ?? 'farmstead_hosting';
+
   // Build prompt and call Claude
-  const prompt = buildAnalysisPrompt(typedProperty);
+  const prompt = buildAnalysisPrompt(typedProperty, projectType);
+  console.log('[ai/analyze] prompt built, length:', prompt.length);
   const anthropic = getAnthropicClient();
+  console.log('[ai/analyze] calling Claude model:', ANALYSIS_MODEL);
 
   let toolInput: Record<string, unknown>;
   let inputTokens = 0;
   let outputTokens = 0;
 
   try {
-    const response = await anthropic.messages.create({
+    // Use streaming so the TCP connection stays alive during the 60-90s generation.
+    // Without streaming, an idle-looking connection gets reset by routers/firewalls.
+    const stream = anthropic.messages.stream({
       model: ANALYSIS_MODEL,
-      max_tokens: 4096,
+      max_tokens: 8192,
       tools: [ANALYSIS_TOOL_SCHEMA],
       tool_choice: { type: 'tool', name: 'analyze_italian_property' },
       messages: [{ role: 'user', content: prompt }],
     });
 
+    const response = await stream.finalMessage();
+
     inputTokens = response.usage.input_tokens;
     outputTokens = response.usage.output_tokens;
+    console.log('[ai/analyze] stop_reason:', response.stop_reason, 'tokens in/out:', inputTokens, outputTokens);
 
     const toolBlock = response.content.find((b) => b.type === 'tool_use');
     if (!toolBlock || toolBlock.type !== 'tool_use') {
+      console.error('[ai/analyze] no tool_use block, content types:', response.content.map((b) => b.type));
       return NextResponse.json({ error: 'Claude did not return tool output' }, { status: 500 });
     }
 
     toolInput = toolBlock.input as Record<string, unknown>;
+    console.log('[ai/analyze] tool input keys:', Object.keys(toolInput));
+    console.log('[ai/analyze] raw tool input (first 500):', JSON.stringify(toolInput).slice(0, 500));
   } catch (err) {
-    console.error('[ai/analyze] Claude API error:', err);
+    const errObj = err as Error & { status?: number; error?: unknown };
+    console.error('[ai/analyze] Claude API error:', {
+      name: errObj.name,
+      message: errObj.message,
+      status: errObj.status,
+      cause: errObj.cause,
+    });
     return NextResponse.json(
-      { error: `AI analysis failed: ${(err as Error).message}` },
+      { error: `AI analysis failed: ${errObj.message}`, detail: errObj.name },
       { status: 500 },
     );
   }
@@ -84,9 +110,11 @@ export async function POST(req: NextRequest) {
   const { seismicZone, wildBoarRisk, boarFencingCostEstimate, landAlerts } =
     computeContextualFacts(typedProperty);
 
+  console.log('[ai/analyze] tool input keys:', Object.keys(toolInput));
   // Delete existing rows before inserting fresh ones (re-analysis support)
   await supabase.from('ai_analyses').delete().eq('property_id', propertyId);
   await supabase.from('regulatory_assessments').delete().eq('property_id', propertyId);
+  console.log('[ai/analyze] old rows deleted, inserting fresh analysis...');
 
   // Save AI analysis
   const { data: savedAnalysis, error: analysisError } = await supabase
@@ -113,9 +141,10 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (analysisError) {
-    console.error('[ai/analyze] DB error (ai_analyses):', analysisError);
+    console.error('[ai/analyze] DB error (ai_analyses):', analysisError.message, analysisError.details, analysisError.hint);
     return NextResponse.json({ error: analysisError.message }, { status: 500 });
   }
+  console.log('[ai/analyze] ai_analyses saved, inserting regulatory...');
 
   // Save regulatory assessment (seismic_zone and wild boar from pre-computed facts)
   const { data: savedRegulatory, error: regulatoryError } = await supabase
@@ -172,4 +201,10 @@ export async function POST(req: NextRequest) {
     regulatory: savedRegulatory,
     usage: { inputTokens, outputTokens },
   });
+
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error('[ai/analyze] Unhandled error:', msg);
+    return NextResponse.json({ error: `Analysis failed: ${msg}` }, { status: 500 });
+  }
 }

@@ -1,3 +1,5 @@
+export type ProjectType = 'private_homestead' | 'farmstead_hosting';
+
 export interface SearchCriteria {
   id: string;
   project_id: string;
@@ -43,6 +45,7 @@ export interface Project {
   user_id: string;
   name: string;
   description?: string;
+  project_type: ProjectType;
   search_criteria?: SearchCriteria;
   scoring_weights?: ScoringWeights;
   created_at: string;

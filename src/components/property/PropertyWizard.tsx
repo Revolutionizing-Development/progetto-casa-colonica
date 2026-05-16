@@ -8,18 +8,13 @@ import { ITALIAN_REGIONS } from '@/config/regions';
 const ENERGY_CLASSES = ['A4', 'A3', 'A2', 'A1', 'B', 'C', 'D', 'E', 'F', 'G'] as const;
 const LISTING_SOURCES = ['Idealista', 'Immobiliare.it', 'Gate-Away', 'Grimaldi', 'Direct', 'Agent', 'Other'];
 
-const PHOTO_CATEGORIES = {
-  exterior: { label: 'Exterior', hint: 'Front facade, rear, entrance, access road' },
-  interior: { label: 'Interior', hint: 'Living room, kitchen, bedrooms, bathrooms' },
-  land: { label: 'Land & Outbuildings', hint: 'Land overview, olive grove, barn, outbuildings' },
-} as const;
-
-type PhotoCategory = keyof typeof PHOTO_CATEGORIES;
+import { PHOTO_CATEGORY_LABELS, type PhotoCategory } from '@/types/photo';
 
 interface PendingPhoto {
   file: File;
   preview: string;
   category: PhotoCategory;
+  classifying?: boolean;
 }
 
 interface WizardData {
@@ -77,32 +72,31 @@ function computeCompleteness(d: WizardData, photos: PendingPhoto[]): number {
   if (d.num_bathrooms) score += 2;
   if (d.year_built) score += 4;
   if (d.energy_class) score += 5;
-  // Land features — award points if any toggle has been intentionally set
-  score += 5; // always award — user has seen step 4
+  score += 5;
   if (d.listing_description.trim()) score += 5;
-  const hasExterior = photos.some((p) => p.category === 'exterior');
-  const hasInterior = photos.some((p) => p.category === 'interior');
-  const hasLand = photos.some((p) => p.category === 'land');
-  if (hasExterior) score += 16;
-  if (hasInterior) score += 12;
-  if (hasLand) score += 8;
+  if (photos.length > 0) score += 16;
+  if (photos.length >= 5) score += 10;
+  if (photos.length >= 10) score += 10;
   return Math.min(score, 100);
 }
+
+export type { WizardData };
 
 interface Props {
   projectId: string;
   locale: string;
+  initialData?: Partial<WizardData>;
 }
 
-export default function PropertyWizard({ projectId, locale }: Props) {
+export default function PropertyWizard({ projectId, locale, initialData }: Props) {
   const router = useRouter();
   const [step, setStep] = useState(1);
-  const [data, setData] = useState<WizardData>(INITIAL_DATA);
+  const [data, setData] = useState<WizardData>({ ...INITIAL_DATA, ...initialData });
   const [photos, setPhotos] = useState<PendingPhoto[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [classifying, setClassifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [photoCategory, setPhotoCategory] = useState<PhotoCategory>('exterior');
 
   const completeness = computeCompleteness(data, photos);
 
@@ -111,16 +105,49 @@ export default function PropertyWizard({ projectId, locale }: Props) {
   }, []);
 
   const addPhotos = useCallback(
-    (files: FileList | null, category: PhotoCategory) => {
-      if (!files) return;
+    async (files: FileList | null) => {
+      if (!files || files.length === 0) return;
       const incoming: PendingPhoto[] = Array.from(files).map((file) => ({
         file,
         preview: URL.createObjectURL(file),
-        category,
+        category: 'exterior_front' as PhotoCategory,
+        classifying: true,
       }));
+      const startIdx = photos.length;
       setPhotos((prev) => [...prev, ...incoming]);
+
+      setClassifying(true);
+      try {
+        const formData = new FormData();
+        for (const file of Array.from(files)) {
+          formData.append('photos', file);
+        }
+        const res = await fetch('/api/ai/classify-photos', {
+          method: 'POST',
+          body: formData,
+        });
+        const json = await res.json();
+        if (res.ok && json.classifications) {
+          setPhotos((prev) =>
+            prev.map((p, i) => {
+              const classIdx = i - startIdx;
+              const cls = json.classifications.find(
+                (c: { index: number; category: PhotoCategory }) => c.index === classIdx,
+              );
+              if (cls) return { ...p, category: cls.category, classifying: false };
+              return { ...p, classifying: false };
+            }),
+          );
+        } else {
+          setPhotos((prev) => prev.map((p) => ({ ...p, classifying: false })));
+        }
+      } catch {
+        setPhotos((prev) => prev.map((p) => ({ ...p, classifying: false })));
+      } finally {
+        setClassifying(false);
+      }
     },
-    [],
+    [photos.length],
   );
 
   const removePhoto = useCallback((preview: string) => {
@@ -195,9 +222,7 @@ export default function PropertyWizard({ projectId, locale }: Props) {
     'Building Details',
     'Land & Features',
     'Description',
-    'Exterior Photos',
-    'Interior Photos',
-    'Land Photos',
+    'Photos',
     'Review',
   ];
 
@@ -237,39 +262,20 @@ export default function PropertyWizard({ projectId, locale }: Props) {
         {step === 4 && <Step4Features data={data} set={set} />}
         {step === 5 && <Step5Description data={data} set={set} />}
         {step === 6 && (
-          <StepPhotos
-            category="exterior"
+          <StepAllPhotos
             photos={photos}
             addPhotos={addPhotos}
             removePhoto={removePhoto}
+            updateCategory={(preview, category) =>
+              setPhotos((prev) =>
+                prev.map((p) => (p.preview === preview ? { ...p, category } : p)),
+              )
+            }
             fileInputRef={fileInputRef}
-            photoCategory={photoCategory}
-            setPhotoCategory={setPhotoCategory}
+            classifying={classifying}
           />
         )}
         {step === 7 && (
-          <StepPhotos
-            category="interior"
-            photos={photos}
-            addPhotos={addPhotos}
-            removePhoto={removePhoto}
-            fileInputRef={fileInputRef}
-            photoCategory={photoCategory}
-            setPhotoCategory={setPhotoCategory}
-          />
-        )}
-        {step === 8 && (
-          <StepPhotos
-            category="land"
-            photos={photos}
-            addPhotos={addPhotos}
-            removePhoto={removePhoto}
-            fileInputRef={fileInputRef}
-            photoCategory={photoCategory}
-            setPhotoCategory={setPhotoCategory}
-          />
-        )}
-        {step === 9 && (
           <Step9Review data={data} photos={photos} completeness={completeness} />
         )}
       </div>
@@ -291,7 +297,7 @@ export default function PropertyWizard({ projectId, locale }: Props) {
           Back
         </button>
 
-        {step < 9 ? (
+        {step < steps.length ? (
           <button
             onClick={() => setStep((s) => s + 1)}
             className="px-5 py-2.5 text-sm font-medium bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors"
@@ -624,59 +630,70 @@ function Step5Description({ data, set }: StepProps) {
   );
 }
 
-interface StepPhotosProps {
-  category: PhotoCategory;
+interface StepAllPhotosProps {
   photos: PendingPhoto[];
-  addPhotos: (files: FileList | null, category: PhotoCategory) => void;
+  addPhotos: (files: FileList | null) => void;
   removePhoto: (preview: string) => void;
+  updateCategory: (preview: string, category: PhotoCategory) => void;
   fileInputRef: React.RefObject<HTMLInputElement>;
-  photoCategory: PhotoCategory;
-  setPhotoCategory: (c: PhotoCategory) => void;
+  classifying: boolean;
 }
 
-function StepPhotos({ category, photos, addPhotos, removePhoto, fileInputRef }: StepPhotosProps) {
-  const { label, hint } = PHOTO_CATEGORIES[category];
-  const categoryPhotos = photos.filter((p) => p.category === category);
-
+function StepAllPhotos({ photos, addPhotos, removePhoto, updateCategory, fileInputRef, classifying }: StepAllPhotosProps) {
   return (
     <div className="space-y-6">
-      <StepHeader title={`${label} Photos`} subtitle={hint} />
+      <StepHeader
+        title="Photos"
+        subtitle="Drop all photos at once — the AI will classify each as aerial, exterior, interior, etc."
+      />
 
-      {/* Drop zone */}
       <label className="block cursor-pointer">
         <div
           className="border-2 border-dashed border-stone-200 rounded-xl p-8 text-center hover:border-amber-400 hover:bg-amber-50/30 transition-colors"
           onDragOver={(e) => e.preventDefault()}
           onDrop={(e) => {
             e.preventDefault();
-            addPhotos(e.dataTransfer.files, category);
+            addPhotos(e.dataTransfer.files);
           }}
         >
           <div className="text-3xl mb-2">📷</div>
-          <p className="text-sm font-medium text-stone-700">Drop photos here or click to browse</p>
-          <p className="text-xs text-stone-400 mt-1">JPEG, PNG, WebP, HEIC · up to 20 MB each</p>
+          <p className="text-sm font-medium text-stone-700">Drop all photos here or click to browse</p>
+          <p className="text-xs text-stone-400 mt-1">JPEG, PNG, WebP, HEIC · up to 20 MB each · AI auto-classifies</p>
           <input
             ref={fileInputRef}
             type="file"
             multiple
             accept="image/*"
             className="sr-only"
-            onChange={(e) => addPhotos(e.target.files, category)}
+            onChange={(e) => addPhotos(e.target.files)}
           />
         </div>
       </label>
 
-      {/* Photo grid */}
-      {categoryPhotos.length > 0 && (
+      {classifying && (
+        <div className="flex items-center gap-3 py-3 px-4 bg-amber-50 rounded-lg border border-amber-100">
+          <div className="w-4 h-4 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm text-amber-700">Classifying photos with AI...</p>
+        </div>
+      )}
+
+      {photos.length > 0 && (
         <div className="grid grid-cols-3 gap-3">
-          {categoryPhotos.map((photo) => (
-            <div key={photo.preview} className="relative group aspect-video rounded-lg overflow-hidden bg-stone-100">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={photo.preview}
-                alt=""
-                className="w-full h-full object-cover"
-              />
+          {photos.map((photo) => (
+            <div key={photo.preview} className="relative group">
+              <div className="aspect-video rounded-lg overflow-hidden bg-stone-100">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={photo.preview} alt="" className="w-full h-full object-cover" />
+              </div>
+              <select
+                value={photo.category}
+                onChange={(e) => updateCategory(photo.preview, e.target.value as PhotoCategory)}
+                className="absolute bottom-1 left-1 px-1.5 py-0.5 bg-black/70 text-white text-[10px] rounded border-0 appearance-auto"
+              >
+                {Object.entries(PHOTO_CATEGORY_LABELS).map(([key, label]) => (
+                  <option key={key} value={key}>{label}</option>
+                ))}
+              </select>
               <button
                 onClick={() => removePhoto(photo.preview)}
                 className="absolute top-1.5 right-1.5 w-6 h-6 bg-black/60 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
@@ -689,22 +706,19 @@ function StepPhotos({ category, photos, addPhotos, removePhoto, fileInputRef }: 
         </div>
       )}
 
-      {categoryPhotos.length === 0 && (
+      {photos.length === 0 && (
         <div className="flex items-start gap-2.5 p-3 bg-amber-50 border border-amber-100 rounded-lg">
           <span className="text-amber-600 mt-0.5">ℹ</span>
           <p className="text-xs text-amber-800">
-            {category === 'exterior'
-              ? 'Exterior photos are the most important for AI analysis — try to include front facade, rear, and access road.'
-              : category === 'interior'
-              ? 'Interior photos help the AI assess structural condition, ceiling height, and renovation scope.'
-              : 'Land photos help assess olive grove size, outbuilding condition, and farmstead layout potential.'}
+            Add all property photos at once — exterior, interior, land, aerial, everything.
+            The AI will determine what each photo shows.
           </p>
         </div>
       )}
 
       <Badge
-        text={`${categoryPhotos.length} ${label.toLowerCase()} photo${categoryPhotos.length !== 1 ? 's' : ''} added`}
-        type={categoryPhotos.length > 0 ? 'green' : 'neutral'}
+        text={`${photos.length} photo${photos.length !== 1 ? 's' : ''} added`}
+        type={photos.length > 0 ? 'green' : 'neutral'}
       />
     </div>
   );
@@ -719,9 +733,8 @@ function Step9Review({
   photos: PendingPhoto[];
   completeness: number;
 }) {
-  const exteriorCount = photos.filter((p) => p.category === 'exterior').length;
-  const interiorCount = photos.filter((p) => p.category === 'interior').length;
-  const landCount = photos.filter((p) => p.category === 'land').length;
+  const categories = new Set(photos.map((p) => p.category));
+  const categoryCount = categories.size;
 
   return (
     <div className="space-y-6">
@@ -796,7 +809,7 @@ function Step9Review({
         />
         <ReviewItem
           label="Photos"
-          value={`${exteriorCount} exterior · ${interiorCount} interior · ${landCount} land`}
+          value={`${photos.length} photo${photos.length !== 1 ? 's' : ''} across ${categoryCount} categor${categoryCount !== 1 ? 'ies' : 'y'}`}
         />
         <ReviewItem
           label="Source"

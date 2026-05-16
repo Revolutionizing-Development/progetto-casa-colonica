@@ -1,16 +1,16 @@
 'use client';
 
-import { useActionState, useState } from 'react';
+import { useState, useTransition } from 'react';
+import { useFormState } from 'react-dom';
 import {
   upsertScoringWeights,
-  WEIGHT_KEYS,
-  defaultWeightsPct,
-  type WeightKey,
   type ScoringWeightsRow,
   type ActionResult,
 } from '@/app/actions/scoring-weights';
+import { WEIGHT_KEYS, HOMESTEAD_WEIGHT_KEYS, defaultWeightsPct, weightKeysForType, type WeightKey } from '@/lib/scoring-criteria';
+import type { ProjectType } from '@/types/project';
 
-const WEIGHT_LABELS: Record<WeightKey, string> = {
+const WEIGHT_LABELS: Record<string, string> = {
   purchase_price: 'Purchase Price',
   all_in_cost: 'All-In Cost',
   structural_condition: 'Structural Condition',
@@ -27,26 +27,35 @@ const WEIGHT_LABELS: Record<WeightKey, string> = {
 interface Props {
   projectId: string;
   initial: ScoringWeightsRow | null;
+  projectType: ProjectType;
 }
 
-function rowToPct(row: ScoringWeightsRow | null): Record<WeightKey, number> {
-  if (!row) return defaultWeightsPct();
+function rowToPct(row: ScoringWeightsRow | null, keys: readonly string[], projectType: ProjectType): Record<string, number> {
+  if (!row) return defaultWeightsPct(projectType);
   return Object.fromEntries(
-    WEIGHT_KEYS.map((k) => [k, Math.round((row[k] ?? 0) * 100)]),
-  ) as Record<WeightKey, number>;
+    keys.map((k) => [k, Math.round(((row as Record<string, number>)[k] ?? 0) * 100)]),
+  );
 }
 
 const initialState: ActionResult | null = null;
 
-export default function ScoringWeightsForm({ projectId, initial }: Props) {
+export default function ScoringWeightsForm({ projectId, initial, projectType }: Props) {
+  const keys = weightKeysForType(projectType);
   const action = upsertScoringWeights.bind(null, projectId);
-  const [state, formAction, isPending] = useActionState(action, initialState);
-  const [weights, setWeights] = useState<Record<WeightKey, number>>(rowToPct(initial));
+  const [isPending, startTransition] = useTransition();
+  const [state, formAction] = useFormState(action, initialState);
+  const [weights, setWeights] = useState<Record<string, number>>(rowToPct(initial, keys, projectType));
+
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const data = new FormData(e.currentTarget);
+    startTransition(() => { formAction(data); });
+  }
 
   const total = Object.values(weights).reduce((a, b) => a + b, 0);
   const isValid = Math.abs(total - 100) < 0.1;
 
-  function handleChange(key: WeightKey, value: string) {
+  function handleChange(key: string, value: string) {
     const num = Math.max(0, Math.min(100, parseInt(value) || 0));
     setWeights((prev) => ({ ...prev, [key]: num }));
   }
@@ -58,7 +67,7 @@ export default function ScoringWeightsForm({ projectId, initial }: Props) {
     : 'text-amber-600';
 
   return (
-    <form action={formAction} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-4">
       {state?.error && (
         <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded">{state.error}</p>
       )}
@@ -67,7 +76,7 @@ export default function ScoringWeightsForm({ projectId, initial }: Props) {
       )}
 
       <div className="space-y-2">
-        {WEIGHT_KEYS.map((key) => (
+        {keys.map((key) => (
           <div key={key} className="flex items-center gap-4">
             <span className="w-44 text-sm text-stone-700 shrink-0">{WEIGHT_LABELS[key]}</span>
             <div className="flex-1 bg-stone-100 rounded-full h-2 overflow-hidden">
@@ -99,7 +108,7 @@ export default function ScoringWeightsForm({ projectId, initial }: Props) {
         <div className="flex gap-3 items-center">
           <button
             type="button"
-            onClick={() => setWeights(defaultWeightsPct())}
+            onClick={() => setWeights(defaultWeightsPct(projectType))}
             className="text-sm text-stone-500 hover:text-stone-700 transition-colors"
           >
             Reset to defaults

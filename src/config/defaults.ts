@@ -49,6 +49,17 @@ export const SCORING_DEFAULTS = {
   exit_value: 0.04,
 } as const;
 
+export const SCORING_DEFAULTS_HOMESTEAD = {
+  purchase_price: 0.15,
+  all_in_cost: 0.15,
+  structural_condition: 0.15,
+  regulatory_risk: 0.14,
+  lifestyle_fit: 0.15,
+  location_quality: 0.10,
+  land_characteristics: 0.10,
+  exit_value: 0.06,
+} as const;
+
 export const LAND_THRESHOLDS = [
   {
     ha: 1,

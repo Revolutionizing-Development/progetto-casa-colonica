@@ -97,7 +97,7 @@ export default function AIAnalysisPanel({
           <p className="text-xs text-amber-600 mt-1">
             Structural assessment · Regulatory risk · Agriturismo path · Key risks
           </p>
-          <p className="text-xs text-stone-400 mt-3">This takes 15–30 seconds.</p>
+          <p className="text-xs text-stone-400 mt-3">This takes 60–120 seconds.</p>
         </div>
       )}
 
@@ -114,7 +114,7 @@ export default function AIAnalysisPanel({
           <p className="text-stone-400 text-sm mb-1">No analysis yet</p>
           <p className="text-xs text-stone-300">
             Click &quot;Analyze with AI&quot; to generate structural assessment, regulatory risk,
-            and renovation complexity — takes about 20 seconds.
+            and renovation complexity — takes 60–120 seconds.
           </p>
         </div>
       )}

@@ -3,7 +3,9 @@ import Link from 'next/link';
 import { getProperty } from '@/app/actions/properties';
 import { getProject } from '@/app/actions/projects';
 import { getAIAnalysis, getRegulatoryAssessment } from '@/app/actions/ai';
+import { getScoring } from '@/app/actions/scoring';
 import AIAnalysisPanel from '@/components/property/AIAnalysisPanel';
+import ScoringPanel from '@/components/property/ScoringPanel';
 
 interface Props {
   params: { locale: string; id: string };
@@ -53,7 +55,10 @@ export default async function PropertyPage({ params: { locale, id } }: Props) {
 
   if (!property) notFound();
 
-  const project = await getProject(property.project_id);
+  const [project, existingScoring] = await Promise.all([
+    getProject(property.project_id),
+    getScoring(id, property.project_id),
+  ]);
 
   const featureTags = [
     property.has_olive_grove &&
@@ -70,6 +75,8 @@ export default async function PropertyPage({ params: { locale, id } }: Props) {
     { label: 'Scenarios', href: `/${locale}/property/${id}/scenarios` },
     { label: 'Costs', href: `/${locale}/property/${id}/costs` },
     { label: 'Renderings', href: `/${locale}/property/${id}/renderings` },
+    { label: 'Checklist', href: `/${locale}/property/${id}/checklist` },
+    { label: 'Location & Life', href: `/${locale}/property/${id}/location` },
     { label: 'Pipeline', href: `/${locale}/property/${id}/pipeline` },
   ];
 
@@ -250,6 +257,10 @@ export default async function PropertyPage({ params: { locale, id } }: Props) {
         initialAnalysis={existingAnalysis}
         initialRegulatory={existingRegulatory}
       />
+
+      <div className="border-t border-stone-100 pt-8 mt-8">
+        <ScoringPanel propertyId={id} initialScoring={existingScoring} />
+      </div>
     </main>
   );
 }

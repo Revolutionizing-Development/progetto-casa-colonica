@@ -1,6 +1,7 @@
 'use client';
 
-import { useActionState, useState } from 'react';
+import { useState, useTransition } from 'react';
+import { useFormState } from 'react-dom';
 import { updateProject, type ProjectRow, type ActionResult } from '@/app/actions/projects';
 
 interface Props {
@@ -12,8 +13,15 @@ const initialState: ActionResult<{ id: string }> | null = null;
 
 export default function EditProjectForm({ project, locale: _locale }: Props) {
   const [editing, setEditing] = useState(false);
+  const [isPending, startTransition] = useTransition();
   const action = updateProject.bind(null, project.id);
-  const [state, formAction, isPending] = useActionState(action, initialState);
+  const [state, formAction] = useFormState(action, initialState);
+
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const data = new FormData(e.currentTarget);
+    startTransition(() => { formAction(data); });
+  }
 
   if (!editing) {
     return (
@@ -40,7 +48,7 @@ export default function EditProjectForm({ project, locale: _locale }: Props) {
   }
 
   return (
-    <form action={formAction} className="space-y-4 max-w-lg">
+    <form onSubmit={handleSubmit} className="space-y-4 max-w-lg">
       {state?.error && (
         <p className="text-sm text-red-600">{state.error}</p>
       )}

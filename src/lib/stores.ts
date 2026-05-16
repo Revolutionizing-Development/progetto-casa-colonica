@@ -1,15 +1,11 @@
 /**
  * Aditus adapter instantiation.
  *
- * createPostgresAdapter is part of the adapters module (src/adapters/) which
- * is still being built in Aditus. Once released, import it here and pass the
- * pool — the rest of the app already calls stores.user in the correct pattern.
+ * TODO: when @revolutionizing-development/aditus ships createPostgresAdapter,
+ * import it here and replace the stub:
  *
- * Current Aditus status (2026-05-14):
- *   ✅ checkAccess (src/core/check-access.ts)
- *   ✅ State machine, permission matrix
- *   🔜 createPostgresAdapter (src/adapters/) — pending
- *   🔜 createMeteringMiddleware — pending
+ *   import { createPostgresAdapter } from '@revolutionizing-development/aditus';
+ *   _stores = { user: createPostgresAdapter(pool) };
  */
 import { Pool } from 'pg';
 
@@ -25,23 +21,9 @@ function getPool(): Pool {
 
 export function getStores() {
   if (_stores) return _stores;
-
   const pool = getPool();
-
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { createPostgresAdapter } = require('@revolutionizing-development/aditus');
-    _stores = { user: createPostgresAdapter(pool) };
-  } catch {
-    // Aditus adapters not yet released — stub until available
-    _stores = {
-      user: {
-        _pool: pool,
-        _stub: true,
-      },
-    };
-  }
-
+  // Stub: adapters not yet released — every authenticated user is allowed through
+  _stores = { user: { _pool: pool, _stub: true } };
   return _stores;
 }
 

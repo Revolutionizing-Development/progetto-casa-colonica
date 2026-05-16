@@ -1,4 +1,5 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 
 export function createClient() {
@@ -19,6 +20,18 @@ export function createClient() {
         },
       },
     }
+  );
+}
+
+/**
+ * Plain service-role client for Route Handlers and background jobs.
+ * No cookie management — safe to call from any async context.
+ * Service role bypasses RLS, so ownership checks must be done in app code.
+ */
+export function createAdminClient() {
+  return createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
   );
 }
 

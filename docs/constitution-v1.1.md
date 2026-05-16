@@ -86,6 +86,14 @@ Most users will be buying from abroad — the US, UK, Northern Europe, Australia
 
 In Italy, the difference between a properly documented renovation and a poorly documented one is tens of thousands of euros in lost tax deductions. The Bonus Ristrutturazione alone offers up to €48,000 in deductions on a primary residence — but only if every invoice has the correct Partita IVA, every payment goes through a bonifico parlante with the exact legal reference text, and ENEA deadlines for energy work are met. A single improperly documented payment means that expense is permanently non-deductible. The app treats invoice capture, payment method verification, tax bonus categorization, and deadline tracking as core functionality — not bookkeeping. Every invoice that passes through the system is a potential €136/year in tax savings for the next decade. The cost tracking module is not a Phase 2 nice-to-have; it is one of the most valuable features in the entire product.
 
+**Principle 14: Operating Sustainability Over Investment Return**
+
+Buyers don't ask "when do I recoup my €560K?" They ask "can I afford to live there?" The financial model defaults to the annual operating P&L: income vs running costs = net operating income. The purchase and renovation are an asset acquisition — the buyer owns a €700K+ property they also live in. The operating model tells them whether that life is sustainable. The sustainability indicator ("Self-sustaining from Year 3, +€2,250–3,650/month") is the single most important number in the financial model. Investment break-even (18 years from rental alone, 8 years with appreciation) is available as a secondary toggle for investors, but it is never the default view.
+
+**Principle 15: Requirements Are Living Code**
+
+The requirements document (`docs/requirements-v1.2.md`) is part of the codebase, not a separate artifact that goes stale. When Claude Code implements a feature, adds a table, changes a type, or modifies a flow, it updates the requirements document in the same session. When a feature is descoped, deferred, or redesigned during implementation, the requirements reflect the actual state — not the planned state. The requirements document is the source of truth for "what does this app do today," not "what did we hope it would do when we started." Version bumps and change notes in the amendment log are mandatory for any material change.
+
 ---
 
 ## Non-Negotiables
@@ -103,6 +111,8 @@ In Italy, the difference between a properly documented renovation and a poorly d
 | N9 | No expense recorded without tax eligibility check. | Every invoice entering the system is checked for deductibility: valid Partita IVA, correct payment method (bonifico parlante), applicable bonus category. Non-qualifying payments are flagged immediately — not discovered at tax time. A cash payment to a contractor is money the user can never recover through deductions; the app must warn them before the payment is made, not after. |
 | N10 | Guest apartments are physically separated from the owner residence. | Guests must have independent entrances, separate outdoor seating, no sightlines to owner spaces, sound insulation, and separate parking. If a building layout cannot support independent guest entrances, the AI flags this during analysis — before the buyer falls in love with the property. Shared spaces (courtyard, pizza oven) are accessed on a scheduled basis, never through the owner's private areas. |
 | N11 | No smoking anywhere on the property. | This is a strict, non-negotiable house rule applied across all Airbnb listings — inside, outside, terraces, courtyards, gardens, parking. No exceptions, no designated smoking areas. The app templates this into every listing, every booking confirmation, and every guest communication. "Smoke-free farmstead" is positioned as a feature for families and wellness travelers, not just a restriction. |
+| N12 | Financial model defaults to operating P&L, not investment break-even. | The default view shows annual income vs annual operating costs = net operating income. This answers "can I afford this life?" — the question that keeps buyers up at night. Investment break-even (18 years from rental, 8 with appreciation) is available as a secondary toggle but never the default. The sustainability indicator ("Self-sustaining from Year 3") and monthly net cash flow (+€2,250–3,650/mo) are the headline numbers. |
+| N13 | Requirements document updated in the same session as feature implementation. | Per P15: `docs/requirements-v1.2.md` is part of the codebase, not a separate artifact. When Claude Code implements a feature, it updates the requirements doc to match actual behavior. When a feature is descoped, the doc reflects reality. The requirements describe what the app does today — never what it was supposed to do. |
 
 ---
 
@@ -173,6 +183,6 @@ This app NEVER implements its own auth, authorization, or metering logic.
 | Version | Date | Change | Rationale |
 |---------|------|--------|-----------|
 | 1.0 | May 2026 | Initial constitution adopted. | Codifies lessons from Italian property analysis. Incorporates Claude, ChatGPT, and Gemini evaluations. |
-| 1.1 | May 2026 | Added P13 (Documentation Is Money), N9 (tax eligibility check), N10 (guest separation), N11 (no-smoking policy). Updated P8 to include guest separation. Updated product positioning. | Italian renovation tax deductions worth €34K–€48K require precise documentation. Guest separation is a physical design requirement, not optional. No-smoking is a strict property-wide policy positioned as a feature. Ongoing farmstead costs (livestock, oven, courtyard) must be in the financial model. |
+| 1.1 | May 2026 | Added P13 (Documentation Is Money), P14 (Operating Sustainability), P15 (Living Documentation), N9 (tax eligibility check), N10 (guest separation), N11 (no-smoking), N12 (operating P&L default), N13 (requirements maintenance). Updated P8 to include guest separation. Updated product positioning. | Tax deductions worth €34K–€48K require precise documentation. Guest separation is physical design requirement. No-smoking is strict property-wide policy. Financial model defaults to operating P&L ("can I afford this life?") not investment break-even. Requirements document maintained as living code by Claude Code. |
 
 *End of Constitution*

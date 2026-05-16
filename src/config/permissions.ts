@@ -33,6 +33,9 @@ export type Action =
   | 'ai:refine-estimate'
   | 'ai:estimate-arv'
   | 'ai:ocr-invoice'
+  // Household profile
+  | 'household:read'
+  | 'household:update'
   // Cost tracking
   | 'invoice:create'
   | 'invoice:read'
@@ -64,6 +67,8 @@ export const TIER_PERMISSIONS: Record<Tier, TierPermissions> = {
       'property:read',
       'property:update',
       'ai:analyze-property',
+      'household:read',
+      'household:update',
       'invoice:create',
       'invoice:read',
     ],
@@ -88,6 +93,8 @@ export const TIER_PERMISSIONS: Record<Tier, TierPermissions> = {
       'ai:estimate-renovation',
       'ai:assess-regulatory',
       'ai:ocr-invoice',
+      'household:read',
+      'household:update',
       'invoice:create',
       'invoice:read',
       'invoice:update',
@@ -120,6 +127,8 @@ export const TIER_PERMISSIONS: Record<Tier, TierPermissions> = {
       'ai:refine-estimate',
       'ai:estimate-arv',
       'ai:ocr-invoice',
+      'household:read',
+      'household:update',
       'invoice:create',
       'invoice:read',
       'invoice:update',
@@ -153,6 +162,8 @@ export const TIER_PERMISSIONS: Record<Tier, TierPermissions> = {
       'ai:refine-estimate',
       'ai:estimate-arv',
       'ai:ocr-invoice',
+      'household:read',
+      'household:update',
       'invoice:create',
       'invoice:read',
       'invoice:update',

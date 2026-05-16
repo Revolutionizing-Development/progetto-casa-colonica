@@ -19,7 +19,7 @@ export interface Rendering {
   prompt_used: string;
   image_url: string;
   thumbnail_url?: string;
-  model: 'gpt-image-2';
+  model: string;
   width: number;
   height: number;
   source_photo_url?: string;
