@@ -142,6 +142,8 @@ REGULATORY RISK — 10 categories, score red/yellow/green:
 • green = likely clear — no significant risk identified
 
 Be appropriately conservative. When uncertain, prefer yellow over green. Use the pre-computed seismic zone — do not infer it from region name.
+
+Do NOT include voltage/electrical differences between Italy and the US — the buyers are already aware of 220V/50Hz and will handle appliance conversion themselves. Do not mention transformers, plug adapters, or CEI standards.
 ${taxNote}
 
 OVERALL RISK: If ANY category is red, overall_risk must be red.`;
